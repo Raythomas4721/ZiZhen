@@ -27,4 +27,11 @@ export const chars: CharDef[] = [
   { ch: '風', radical: '風', kind: 'light' },
   { ch: '千', radical: '十', kind: 'metal' },
   { ch: '萬', radical: '艸', kind: 'support' },
+  // 第五章
+  { ch: '星', radical: '日', kind: 'light' },
+  { ch: '燈', radical: '火', kind: 'light' },
+  { ch: '夜', radical: '夕', kind: 'light' },
+  { ch: '雪', radical: '雨', kind: 'water' },
+  { ch: '花', radical: '艸', kind: 'support' },
+  { ch: '江', radical: '水', kind: 'water' },
 ];

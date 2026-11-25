@@ -80,6 +80,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       }
       if (e.t === 'compose') showToast(`${e.a}＋${e.b}＝${e.out}`);
       if (e.t === 'idiomReady') showToast(`「${e.w}」集滿了！`);
+      if (e.t === 'couplet' && e.fresh) showToast(`對仗！「${e.a}」對「${e.b}」`);
       if (e.t === 'idiom') showToast(`${e.w}！`);
       if (e.t === 'swap') showToast('錯字把兩個字對調了！');
     }
@@ -347,7 +348,12 @@ function TowerInfo({ ctx, s, t }: { ctx: Ctx; s: GameState; t: Tower }) {
         {t.ch}　{'●'.repeat(t.lv)}　{KIND_NAME[kindOf(ctx, t.ch)]}
       </b>
       　{parts.join('・')}
-      {ws.length > 0 && <div className="muted">在詞裡：{ws.map((w) => w.w).join('、')}</div>}
+      {ws.length > 0 && (
+        <div className="muted">
+          在詞裡：{ws.map((w) => `${w.w}（${ctx.words.get(w.w)?.cat ?? ''}）`).join('、')}
+          {s.couplets.some((c) => c.cells.some((p) => p.x === t.x && p.y === t.y)) && '・對仗中'}
+        </div>
+      )}
     </div>
   );
 }

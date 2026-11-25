@@ -77,7 +77,7 @@ describe('錯字', () => {
     return {
       ...s,
       spawns: [],
-      enemies: [{ id: 999, def: 'cuozi', hp: 1e9, maxHp: 1e9, d: 2, slowMul: 1, slowLeft: 0, frozen: 1e9, burnDps: 0, burnLeft: 0, inkCool: 0 }],
+      enemies: [{ id: 999, def: 'cuozi', hp: 1e9, maxHp: 1e9, d: 2, slowMul: 1, slowLeft: 0, frozen: 1e9, burnDps: 0, burnLeft: 0, inkCool: 0, seen: true }],
     };
   }
 

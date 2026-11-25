@@ -6,7 +6,9 @@ import type { Ctx } from '../engine/ctx';
 import { kindOf } from '../engine/stats';
 import { COLS, ROWS, type Card, type Cell, type GameState, type ToolId } from '../engine/types';
 import { castIdiom } from '../engine/idioms';
-import { pairs } from '../engine/words';
+import { chapterOf } from '../engine/ctx';
+import { findCouplets, findWords, pairs } from '../engine/words';
+import type { Tower } from '../engine/types';
 import { reachableIdioms } from '../engine/box';
 
 export type Rand = () => number;
@@ -117,6 +119,14 @@ function idiomScore(ctx: Ctx, s: GameState, ch: string, x: number, y: number): n
     });
   }
   return best;
+}
+
+/** 放下這個字以後，會不會多出對仗。 */
+function coupletScore(ctx: Ctx, s: GameState, ch: string, x: number, y: number): number {
+  if (!chapterOf(ctx, s.chapter).rules?.couplets) return 0;
+  if (!wordsAt(ctx, s, ch, x, y)) return 0;
+  const trial = [...s.towers, { id: -1, ch, lv: 1, x, y, inked: 0 } as Tower];
+  return Math.max(0, findCouplets(ctx, findWords(ctx, trial)).length - s.couplets.length);
 }
 
 /** 集滿的成語：墨妖夠多或頭目在場就放。 */
@@ -246,7 +256,7 @@ function smart(opts: SmartOpts): Bot {
       } else {
         cell = bestCell(freeGrass(s), (p) => {
           let v = coverage(s, p.x, p.y);
-          if (opts.words) v += wordsAt(ctx, s, c.v, p.x, p.y) * 8 + potential(ctx, s, c.v, p.x, p.y) * 0.5 + idiomScore(ctx, s, c.v, p.x, p.y) * 4;
+          if (opts.words) v += wordsAt(ctx, s, c.v, p.x, p.y) * 8 + potential(ctx, s, c.v, p.x, p.y) * 0.5 + idiomScore(ctx, s, c.v, p.x, p.y) * 4 + coupletScore(ctx, s, c.v, p.x, p.y) * 10;
           return v;
         });
       }

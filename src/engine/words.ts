@@ -1,7 +1,7 @@
 // 詞：字照閱讀順序相鄰就會連成詞（橫排左到右、直排上到下）。被塗黑的字不算。
 
 import type { Ctx } from './ctx';
-import type { ActiveIdiom, ActiveWord, Cell, Tower } from './types';
+import type { ActiveIdiom, ActiveWord, Cell, Couplet, Tower } from './types';
 
 export function findWords(ctx: Ctx, towers: Tower[]): ActiveWord[] {
   const at = new Map<string, Tower>();
@@ -53,6 +53,24 @@ export function findIdioms(ctx: Ctx, towers: Tower[]): ActiveIdiom[] {
         text += o.ch;
       }
       if (cells.length === 4 && ctx.idioms.has(text)) out.push({ w: text, cells, dir });
+    }
+  }
+  return out;
+}
+
+/**
+ * 對仗：兩個同類、不同的詞並排。
+ * 橫的詞上下疊（同樣兩欄、相鄰兩列），或直的詞左右靠（同樣兩列、相鄰兩欄）。
+ */
+export function findCouplets(ctx: Ctx, words: ActiveWord[]): Couplet[] {
+  const out: Couplet[] = [];
+  for (const a of words) {
+    for (const b of words) {
+      if (a === b || a.w === b.w || a.dir !== b.dir) continue;
+      const stacked = a.dir === 'h' ? b.a.x === a.a.x && b.a.y === a.a.y + 1 : b.a.y === a.a.y && b.a.x === a.a.x + 1;
+      if (!stacked) continue;
+      if (ctx.words.get(a.w)?.cat !== ctx.words.get(b.w)?.cat) continue;
+      out.push({ a: a.w, b: b.w, cells: [a.a, a.b, b.a, b.b] });
     }
   }
   return out;

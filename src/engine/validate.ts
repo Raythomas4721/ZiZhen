@@ -37,6 +37,7 @@ export function validateContent(ctx: Ctx): string[] {
     for (const x of cs) if (!ctx.chars.has(x)) err('詞', `「${w.w}」用到沒定義的字「${x}」`);
     if (cs[0] === cs[1]) err('詞', `「${w.w}」兩個字一樣`);
     if (Object.keys(w.effect).length === 0) err('詞', `「${w.w}」沒有效果`);
+    if (!w.cat) err('詞', `「${w.w}」沒有類別`);
   }
 
   // 成語
@@ -103,6 +104,11 @@ export function validateContent(ctx: Ctx): string[] {
     if (rep.weak.length) err(where, `推薦書箱裡的「${rep.weak.join('、')}」湊不到 2 個詞`);
     const makeable = wordsWithin(ctx, cands).length;
     if (makeable < MIN_WORDS) err(where, `只湊得出 ${makeable} 個詞（至少 ${MIN_WORDS}）`);
+    if (ch.rules?.couplets) {
+      const ws = wordsWithin(ctx, box);
+      const pairs = ws.filter((a) => ws.some((b) => a.w !== b.w && a.cat === b.cat));
+      if (pairs.length < 2) err(where, '推薦書箱裡找不到兩個同類的詞，排不出對仗');
+    }
     if (ch.index >= IDIOM_FROM) {
       if (idiomsWithin(ctx, cands).length === 0) err(where, '湊不出任何成語');
       if (rep.idioms === 0) err(where, '推薦書箱裡湊不出成語');

@@ -100,6 +100,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
   // 字塔攻擊
   const positions = new Map<number, { x: number; y: number }>();
   for (const e of n.enemies) positions.set(e.id, positionAt(n.path, e.d));
+  revealHidden(ctx, n, positions);
   for (const t of n.towers) {
     if (t.inked > 0) {
       t.inked--;
@@ -114,6 +115,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     for (const e of n.enemies) {
       if (e.hp <= 0) continue;
       const p = positions.get(e.id)!;
+      if (!e.seen) continue;
       if (Math.hypot(p.x - cx, p.y - cy) > t.stats.range) continue;
       if (!target || e.d > target.d) target = e;
     }
@@ -181,4 +183,26 @@ function applySlow(e: Enemy, mul: number, ticks: number) {
 function applyBurn(e: Enemy, dps: number) {
   e.burnDps = Math.max(e.burnDps, dps);
   e.burnLeft = TICK_RATE * 3;
+}
+
+/** 隱墨離書頁剩幾格時一定現形（退路：沒有光環字也打得到）。 */
+export const REVEAL_NEAR_PAGE = 6;
+
+/** 隱墨：在光環字（沒被塗黑）的射程內，或快走到書頁時，才看得到。 */
+function revealHidden(ctx: Ctx, n: GameState, positions: Map<number, { x: number; y: number }>) {
+  let lights: Tower[] | null = null;
+  for (const e of n.enemies) {
+    const def = ctx.enemies.get(e.def)!;
+    if (!def.hidden) {
+      e.seen = true;
+      continue;
+    }
+    if (e.d >= n.path.length - REVEAL_NEAR_PAGE) {
+      e.seen = true;
+      continue;
+    }
+    lights ??= n.towers.filter((t) => t.inked === 0 && kindOf(ctx, t.ch) === 'light');
+    const p = positions.get(e.id)!;
+    e.seen = lights.some((t) => Math.hypot(t.x + 0.5 - p.x, t.y + 0.5 - p.y) <= t.stats.range);
+  }
 }

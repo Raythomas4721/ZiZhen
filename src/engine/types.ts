@@ -48,6 +48,8 @@ export interface WordEffect {
 export interface WordDef {
   w: string;
   effect: WordEffect;
+  /** 詞的類別（天文、地理、器物……）。同類的兩個詞上下並排就是對仗。 */
+  cat: string;
   /** 給玩家看的一句話。 */
   note: string;
 }
@@ -96,6 +98,8 @@ export interface EnemyDef {
   inker?: boolean;
   /** 錯字：會把附近一個詞的兩個字對調。 */
   swapper?: boolean;
+  /** 隱墨：看不見，要靠光環字照出來，或走到離書頁很近才現形。 */
+  hidden?: boolean;
   boss?: boolean;
   /** 畫面上的大小（格）。 */
   size: number;
@@ -122,6 +126,8 @@ export interface ChapterRules {
   startHand?: { kind: CardKind; v: string }[];
   /** 成語直接把整句亮出來，不用自己猜。 */
   idiomHint?: boolean;
+  /** 對仗：同類的兩個詞上下（或左右）並排，四個字都變強。 */
+  couplets?: boolean;
 }
 
 export interface ChapterDef {
@@ -212,6 +218,15 @@ export interface Enemy {
   burnLeft: number;
   /** 塗改、錯字的冷卻。 */
   inkCool: number;
+  /** 隱墨這個 tick 有沒有被照出來（一般墨妖永遠是 true）。 */
+  seen: boolean;
+}
+
+/** 對仗：兩個同類的詞並排。 */
+export interface Couplet {
+  a: string;
+  b: string;
+  cells: Cell[];
 }
 
 /** 被錯字對調的兩座字塔，時間到會換回來。 */
@@ -251,6 +266,7 @@ export type GameEvent =
   | { t: 'invalid'; reason: string }
   | { t: 'compose'; a: string; b: string; out: string }
   | { t: 'idiomReady'; w: string }
+  | { t: 'couplet'; a: string; b: string; fresh: boolean }
   | { t: 'idiom'; w: string }
   | { t: 'swap'; a: Cell; b: Cell }
   | { t: 'waveEnd'; held: boolean; bonus: number };
@@ -271,6 +287,7 @@ export interface GameState {
   towers: Tower[];
   words: ActiveWord[];
   idioms: ActiveIdiom[];
+  couplets: Couplet[];
   /** 每個成語的集氣（0～1）。 */
   charge: Record<string, number>;
   swaps: Swap[];

@@ -187,6 +187,8 @@ export function drawBoard(
     const cy = p.y * cell;
     g.fillStyle = def.flying ? 'rgba(40,34,30,0.5)' : '#1f1a17';
     if (e.frozen > 0) g.fillStyle = '#4b6d8a';
+    // 隱墨：沒被照到時只剩淡淡的影子
+    if (def.hidden) g.globalAlpha = e.seen ? 0.85 : 0.18;
     blob(g, cx, cy, r, e.id);
     g.fill();
     if (def.flying) {
@@ -209,8 +211,16 @@ export function drawBoard(
       g.arc(cx, cy - r, r * 0.25, 0, Math.PI * 2);
       g.fill();
     }
+    g.globalAlpha = 1;
+    if (def.hidden && e.seen) {
+      g.strokeStyle = 'rgba(176,137,28,0.8)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(cx, cy, r * 1.25, 0, Math.PI * 2);
+      g.stroke();
+    }
     const f = e.hp / e.maxHp;
-    if (f < 1) {
+    if (f < 1 && (!def.hidden || e.seen)) {
       g.fillStyle = 'rgba(0,0,0,0.2)';
       g.fillRect(cx - r, cy - r - 6, r * 2, 3);
       g.fillStyle = '#b33a2b';
@@ -265,6 +275,32 @@ export function drawBoard(
       g.arc(f.x * cell, f.y * cell, cell * (0.3 + age * 0.5), 0, Math.PI * 2);
       g.stroke();
     }
+  }
+
+  // 對仗：四個字外面框一圈金色虛線，角落蓋一個「對」字印
+  for (const c of s.couplets) {
+    const xs = c.cells.map((p) => p.x);
+    const ys = c.cells.map((p) => p.y);
+    const x0 = Math.min(...xs) * cell + 1;
+    const y0 = Math.min(...ys) * cell + 1;
+    const w = (Math.max(...xs) - Math.min(...xs) + 1) * cell - 2;
+    const h = (Math.max(...ys) - Math.min(...ys) + 1) * cell - 2;
+    g.strokeStyle = '#b0891c';
+    g.lineWidth = 2.5;
+    g.setLineDash([cell * 0.14, cell * 0.08]);
+    roundRect(g, x0, y0, w, h, cell * 0.16);
+    g.stroke();
+    g.setLineDash([]);
+    const r = cell * 0.17;
+    g.fillStyle = '#b0891c';
+    g.beginPath();
+    g.arc(x0 + w - r * 0.6, y0 + r * 0.6, r, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#fffaf0';
+    g.font = `700 ${r * 1.3}px ${FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('對', x0 + w - r * 0.6, y0 + r * 0.6 + 1);
   }
 
   // 詞名（畫在最上層）

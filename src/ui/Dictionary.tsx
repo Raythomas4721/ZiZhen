@@ -37,7 +37,10 @@ export function Dictionary({ ctx, save, onBack }: Props) {
               found.has(w.w) ? (
                 <div key={w.w} className="word-item">
                   <b>{w.w}</b>
-                  <small>{w.note}</small>
+                  <small>
+                    {'cat' in w ? `［${w.cat}］` : '［成語］'}
+                    {w.note}
+                  </small>
                 </div>
               ) : (
                 <div key={w.w} className="word-item unknown">

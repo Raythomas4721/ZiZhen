@@ -3,7 +3,8 @@
 import type { Ctx } from './ctx';
 import { baseStats, kindOf, LIGHT_RANGE, SUPPORT_RATE } from './stats';
 import type { GameState, Tower } from './types';
-import { findIdioms, findWords } from './words';
+import { chapterOf } from './ctx';
+import { findCouplets, findIdioms, findWords } from './words';
 
 function neighbors(towers: Tower[], t: Tower): Tower[] {
   return towers.filter((o) => o !== t && Math.abs(o.x - t.x) <= 1 && Math.abs(o.y - t.y) <= 1);
@@ -14,6 +15,9 @@ export function refresh(ctx: Ctx, s: GameState): string[] {
   const before = new Set([...s.words.map((w) => w.w), ...s.idioms.map((w) => w.w)]);
   s.words = findWords(ctx, s.towers);
   s.idioms = findIdioms(ctx, s.towers);
+  const beforeCouplets = new Set(s.couplets.map((c) => c.a + c.b));
+  s.couplets = chapterOf(ctx, s.chapter).rules?.couplets ? findCouplets(ctx, s.words) : [];
+  const inCouplet = new Set(s.couplets.flatMap((c) => c.cells.map((p) => `${p.x},${p.y}`)));
 
   for (const t of s.towers) {
     const st = baseStats(ctx, t.ch, t.lv);
@@ -43,6 +47,10 @@ export function refresh(ctx: Ctx, s: GameState): string[] {
       if (k === 'support') rate += SUPPORT_RATE * (1 + 0.25 * (o.lv - 1));
       if (k === 'light' && st.range > 0) st.range += LIGHT_RANGE + 0.05 * (o.lv - 1);
     }
+    if (inCouplet.has(`${t.x},${t.y}`)) {
+      st.dmg *= 1 + COUPLET_DMG;
+      rate += COUPLET_RATE;
+    }
     st.cd = st.cd / (1 + rate);
     // 不在路上的屏障字不擋路
     if (!t.onPath) st.blockMax = 0;
@@ -61,5 +69,15 @@ export function refresh(ctx: Ctx, s: GameState): string[] {
       s.events.push({ t: 'word', w: w.w, fresh: isNew });
     }
   }
+  for (const c of s.couplets) {
+    const key = c.a + c.b;
+    if (beforeCouplets.has(key)) continue;
+    // 對仗不記進字典本，只在剛排出來時提示
+    s.events.push({ t: 'couplet', a: c.a, b: c.b, fresh: true });
+  }
   return fresh;
 }
+
+/** 對仗的加成：四個字傷害和攻速都提高。 */
+export const COUPLET_DMG = 0.3;
+export const COUPLET_RATE = 0.2;

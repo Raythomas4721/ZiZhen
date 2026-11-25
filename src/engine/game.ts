@@ -30,6 +30,7 @@ export function createGame(ctx: Ctx, opts: NewGameOptions): GameState {
     towers: [],
     words: [],
     idioms: [],
+    couplets: [],
     charge: {},
     swaps: [],
     shield: 0,
@@ -108,6 +109,7 @@ export function step(ctx: Ctx, s: GameState): GameState {
       burnDps: 0,
       burnLeft: 0,
       inkCool: TICK_RATE * 2,
+      seen: !def.hidden,
     });
   }
 
