@@ -1,12 +1,12 @@
 // 玩家的操作：抽字、放字、賣卡。每個操作都回傳新的狀態。
 
 import { pathIndex } from './board';
-import { chapterOf, type Ctx } from './ctx';
+import { chapterOf, unlockedChars, type Ctx } from './ctx';
 import { refresh } from './refresh';
 import { pickWeighted } from './rng';
 import { baseStats, kindOf } from './stats';
-import { partnersOf } from './words';
-import { HAND_SIZE, MAX_LEVEL, type Card, type CardKind, type Cell, type GameState, type Tower } from './types';
+import { findWords, partnersOf } from './words';
+import { HAND_SIZE, MAX_LEVEL, type Card, type CardKind, type Cell, type GameState, type ToolId, type Tower } from './types';
 
 export function drawCost(s: GameState): number {
   return 8 + 3 * s.drawsThisWave;
@@ -30,8 +30,8 @@ interface PoolItem {
 export function drawPool(ctx: Ctx, s: GameState): PoolItem[] {
   const ch = chapterOf(ctx, s.chapter);
   const items: PoolItem[] = s.box.map((v) => ({ kind: 'char', v, w: 1 }));
-  for (const p of ch.parts) items.push({ kind: 'part', v: p, w: 0.5 });
-  for (const t of ch.tools) items.push({ kind: 'tool', v: t, w: 0.25 });
+  for (const p of ch.parts) items.push({ kind: 'part', v: p, w: 0.35 });
+  for (const t of ch.tools) items.push({ kind: 'tool', v: t, w: 0.2 });
   return items;
 }
 
@@ -105,7 +105,8 @@ export function placeCheck(ctx: Ctx, s: GameState, card: Card, x: number, y: num
     if (k >= 0 && kindOf(ctx, card.v) !== 'wall') return '只有屏障字（山、木、石……）能放在路上';
     return null;
   }
-  return '這張卡不能放在盤面上';
+  if (card.kind === 'tool') return here ? toolCheck(ctx, s, card.v as ToolId, here) : '工具要拖到盤面上的字';
+  return '部件要先跟另一個部件疊成字';
 }
 
 function levelUp(ctx: Ctx, n: GameState, t: Tower) {
@@ -119,6 +120,7 @@ export function place(ctx: Ctx, s: GameState, uid: number, x: number, y: number)
   if (!card) return s;
   const why = placeCheck(ctx, s, card, x, y);
   if (why) return invalid(s, why);
+  if (card.kind === 'tool') return useTool(ctx, s, uid, x, y);
   const n = edit(s);
   n.hand = n.hand.filter((h) => h.uid !== uid);
   const here = towerAt(n, x, y);
@@ -145,9 +147,22 @@ export function combine(ctx: Ctx, s: GameState, fromUid: number, toUid: number):
   return combineExtra(ctx, s, a, b);
 }
 
-/** 部件合字等其他組合；M5 補上。 */
-function combineExtra(_ctx: Ctx, s: GameState, _a: Card, _b: Card): GameState {
-  return invalid(s, '這兩張卡不能疊');
+export function recipeFor(ctx: Ctx, a: string, b: string): string | undefined {
+  return ctx.recipes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a))?.out;
+}
+
+/** 部件疊部件：照配方合成一個字（放在被疊的那張卡的位置）。 */
+function combineExtra(ctx: Ctx, s: GameState, a: Card, b: Card): GameState {
+  if (a.kind === 'part' && b.kind === 'part') {
+    const out = recipeFor(ctx, a.v, b.v);
+    if (!out) return invalid(s, `${a.v}＋${b.v} 合不成字`);
+    const n = edit(s);
+    n.hand = n.hand.filter((h) => h.uid !== a.uid).map((h) => (h.uid === b.uid ? { uid: h.uid, kind: 'char', v: out, lv: 1 } : h));
+    n.events.push({ t: 'compose', a: a.v, b: b.v, out });
+    return n;
+  }
+  if (a.kind === 'part' || b.kind === 'part') return invalid(s, '部件只能跟部件疊');
+  return invalid(s, '工具要拖到盤面上的字');
 }
 
 /** 把盤面上的字拖到另一個同字同級的字上合成。 */
@@ -165,7 +180,53 @@ export function moveTower(ctx: Ctx, s: GameState, from: Cell, to: Cell): GameSta
   return n;
 }
 
-/** 工具卡拖到盤面上的字；M5 補上。 */
-export function useTool(_ctx: Ctx, s: GameState, _uid: number, _x: number, _y: number): GameState {
-  return invalid(s, '工具還不能用');
+/** 毛筆：同部首、這章拿得到、而且不是自己的字。 */
+export function brushOptions(ctx: Ctx, s: GameState, t: Tower): string[] {
+  const rad = ctx.chars.get(t.ch)?.radical;
+  return unlockedChars(ctx, s.chapter).filter((c) => c !== t.ch && ctx.chars.get(c)?.radical === rad);
+}
+
+function toolCheck(ctx: Ctx, s: GameState, tool: ToolId, t: Tower): string | null {
+  if (tool === 'weight' && t.locked) return '這個字已經鎖住了';
+  if (tool === 'brush' && brushOptions(ctx, s, t).length === 0) return `「${t.ch}」沒有同部首的字可以換`;
+  if (tool === 'brush' && t.onPath) return '路上的屏障不能換字';
+  return null;
+}
+
+/** 工具卡拖到盤面上的字。 */
+export function useTool(ctx: Ctx, s: GameState, uid: number, x: number, y: number): GameState {
+  const card = s.hand.find((h) => h.uid === uid);
+  const here = towerAt(s, x, y);
+  if (!card || card.kind !== 'tool') return s;
+  if (!here) return invalid(s, '工具要拖到盤面上的字');
+  const tool = card.v as ToolId;
+  const why = toolCheck(ctx, s, tool, here);
+  if (why) return invalid(s, why);
+  const n = edit(s);
+  n.hand = n.hand.filter((h) => h.uid !== uid);
+  const t = towerAt(n, x, y)!;
+  if (tool === 'shovel') {
+    // 收回手上；手一定有空位，因為工具卡剛用掉
+    n.towers = n.towers.filter((o) => o.id !== t.id);
+    n.hand.push({ uid: n.nextId++, kind: 'char', v: t.ch, lv: t.lv });
+  } else if (tool === 'weight') {
+    t.locked = true;
+    t.inked = 0;
+  } else if (tool === 'brush') {
+    // 換成能連最多詞的同部首字
+    const opts = brushOptions(ctx, n, t);
+    let best = opts[0];
+    let bestWords = -1;
+    for (const o of opts) {
+      const trial = n.towers.map((x) => (x.id === t.id ? { ...x, ch: o } : x));
+      const w = findWords(ctx, trial).length;
+      if (w > bestWords) {
+        bestWords = w;
+        best = o;
+      }
+    }
+    t.ch = best;
+  }
+  refresh(ctx, n);
+  return n;
 }

@@ -212,6 +212,7 @@ export type GameEvent =
   | { t: 'ink'; x: number; y: number }
   | { t: 'broken'; x: number; y: number }
   | { t: 'invalid'; reason: string }
+  | { t: 'compose'; a: string; b: string; out: string }
   | { t: 'waveEnd'; held: boolean; bonus: number };
 
 export type Phase = 'prep' | 'wave' | 'done';

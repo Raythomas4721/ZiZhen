@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, sell, towerAt } from '../engine/actions';
+import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, recipeFor, sell, towerAt } from '../engine/actions';
 import { chapterOf, type Ctx } from '../engine/ctx';
 import { createGame, starsOf, startWave } from '../engine/game';
 import { kindOf } from '../engine/stats';
-import { COLS, HAND_SIZE, PAGE_HP, TICK_RATE, type Card, type Cell, type GameEvent, type GameState, type Tower } from '../engine/types';
+import { COLS, HAND_SIZE, PAGE_HP, TICK_RATE, type Card, type Cell, type GameEvent, type GameState, type ToolId, type Tower } from '../engine/types';
 import { KIND_NAME } from './draw';
 import { BoardCanvas, type BoardHandle } from './BoardCanvas';
-import { CardView, cardGlyph } from './CardView';
+import { CardView, cardGlyph, TOOL_INFO } from './CardView';
 import { useGame } from './useGame';
 
 interface Props {
@@ -67,9 +67,11 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
           knownRef.current.add(e.w);
           fresh.push(e.w);
         }
-        setWordNote({ w: e.w, note: def?.note ?? '', fresh: isNew });
-        showToast(isNew ? `新詞「${e.w}」！` : `「${e.w}」`);
+        // 塗黑又恢復時也會重新連詞，只有真的新詞才跳提示
+        if (isNew || e.fresh) setWordNote({ w: e.w, note: def?.note ?? '', fresh: isNew });
+        if (isNew) showToast(`新詞「${e.w}」！`);
       }
+      if (e.t === 'compose') showToast(`${e.a}＋${e.b}＝${e.out}`);
     }
     if (fresh.length) onFound(fresh);
   };
@@ -165,6 +167,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   const mergeable = (c: Card): boolean => {
     const src = dragging ?? (selected !== null ? { t: 'card' as const, card: s.hand.find((h) => h.uid === selected)! } : null);
     if (!src || src.t !== 'card' || !src.card || src.card.uid === c.uid) return false;
+    if (src.card.kind === 'part' && c.kind === 'part') return !!recipeFor(ctx, src.card.v, c.v);
     return src.card.kind === 'char' && c.kind === 'char' && canMerge({ ch: src.card.v, lv: src.card.lv }, { ch: c.v, lv: c.lv });
   };
 
@@ -178,6 +181,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   }, [s.phase, s.results, s.found, onFinish]);
 
   const infoTower = info ? towerAt(s, info.x, info.y) : undefined;
+  const selectedCard = selected !== null ? s.hand.find((h) => h.uid === selected) : undefined;
   const tip = s.phase === 'prep' ? ch.tips?.[s.wave] : undefined;
   const cost = drawCost(s);
   const slots = Array.from({ length: HAND_SIZE }, (_, i) => s.hand[i]);
@@ -199,7 +203,24 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       </header>
 
       {tip && <div className="tip">{tip}</div>}
-      {!tip && infoTower && <TowerInfo ctx={ctx} s={s} t={infoTower} />}
+      {selectedCard && selectedCard.kind !== 'char' && (
+        <div className="tip">
+          {selectedCard.kind === 'tool' ? (
+            <>
+              <b>{TOOL_INFO[selectedCard.v as ToolId].name}</b>　{TOOL_INFO[selectedCard.v as ToolId].desc}
+            </>
+          ) : (
+            <>
+              <b>部件「{selectedCard.v}」</b>　疊到另一張部件上合成字。這章可以合：
+              {ctx.recipes
+                .filter((r) => (r.a === selectedCard.v || r.b === selectedCard.v) && ch.parts.includes(r.a) && ch.parts.includes(r.b))
+                .map((r) => `${r.a}＋${r.b}＝${r.out}`)
+                .join('、')}
+            </>
+          )}
+        </div>
+      )}
+      {!selectedCard && !tip && infoTower && <TowerInfo ctx={ctx} s={s} t={infoTower} />}
       {!tip && !infoTower && wordNote && (
         <div className="tip">
           <b>{wordNote.w}</b>　{wordNote.note}

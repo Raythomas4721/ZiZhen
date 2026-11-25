@@ -4,6 +4,8 @@ import { chapterOf, unlockedChars, wordsWithin, type Ctx } from './ctx';
 import { partnersOf } from './words';
 
 export const BOX_SIZE = 8;
+/** 推薦書箱時，這章新解鎖的字加分，讓玩家碰到新東西。 */
+const FRESH_BONUS = 12;
 
 /** 這一章可以挑進書箱的字。 */
 export function boxCandidates(ctx: Ctx, chapterId: string): string[] {
@@ -51,7 +53,7 @@ export function recommendBox(ctx: Ctx, chapterId: string): string[] {
   let bestScore = -Infinity;
   combos(cands, k, (pick) => {
     const r = boxReport(ctx, pick);
-    const score = r.words * 10 - r.weak.length * 100 + pick.filter((c) => fresh.has(c)).length;
+    const score = r.words * 10 - r.weak.length * 100 + pick.filter((c) => fresh.has(c)).length * FRESH_BONUS;
     if (score > bestScore) {
       bestScore = score;
       best = [...pick];

@@ -1,0 +1,46 @@
+import type { ChapterDef } from '../../engine/types';
+
+export const ch02: ChapterDef = {
+  id: 'ch02',
+  index: 2,
+  title: '第二章',
+  book: '灶間手記',
+  intro: '一本沾滿油漬的食譜，每一頁都寫著火候和分量。墨妖聞到味道，連飛白都來了：牠們走得快，屏障也擋不住。',
+  waypoints: [
+    { x: 0, y: 0 },
+    { x: 0, y: 7 },
+    { x: 2, y: 7 },
+    { x: 2, y: 1 },
+    { x: 4, y: 1 },
+    { x: 4, y: 7 },
+    { x: 6, y: 7 },
+    { x: 6, y: 8 },
+  ],
+  waves: [
+    { hp: 2.6, groups: [{ enemy: 'dot', count: 8, every: 1.8, delay: 1 }] },
+    { hp: 2.85, groups: [{ enemy: 'dot', count: 8, every: 1.6, delay: 1 }, { enemy: 'feibai', count: 3, every: 2.5, delay: 8 }] },
+    { hp: 3.1, groups: [{ enemy: 'dot', count: 10, every: 1.4, delay: 1 }, { enemy: 'blob', count: 2, every: 5, delay: 6 }] },
+    { hp: 3.4, groups: [{ enemy: 'feibai', count: 10, every: 1.0, delay: 1 }, { enemy: 'blob', count: 2, every: 5, delay: 5 }] },
+    { hp: 3.3, boss: true, groups: [{ enemy: 'dot', count: 8, every: 1.4, delay: 1 }, { enemy: 'scorch', count: 1, every: 1, delay: 8 }] },
+    { hp: 5.8, groups: [{ enemy: 'dot', count: 16, every: 0.9, delay: 1 }, { enemy: 'blob', count: 4, every: 3.5, delay: 4 }] },
+    { hp: 6.4, groups: [{ enemy: 'feibai', count: 12, every: 0.9, delay: 1 }, { enemy: 'dot', count: 10, every: 1.0, delay: 6 }] },
+    { hp: 7.0, groups: [{ enemy: 'blob', count: 8, every: 2.4, delay: 1 }, { enemy: 'feibai', count: 8, every: 1.2, delay: 5 }] },
+    { hp: 7.8, groups: [{ enemy: 'dot', count: 20, every: 0.8, delay: 1 }, { enemy: 'blob', count: 6, every: 2.6, delay: 4 }, { enemy: 'feibai', count: 6, every: 1.5, delay: 10 }] },
+    { hp: 6.6, boss: true, groups: [{ enemy: 'dot', count: 12, every: 1, delay: 1 }, { enemy: 'feibai', count: 6, every: 1.5, delay: 4 }, { enemy: 'scorch', count: 2, every: 10, delay: 8 }] },
+  ],
+  unlock: ['湯', '鍋', '刀', '口', '煮'],
+  parts: [],
+  tools: ['shovel'],
+  startCoins: 45,
+  tips: {
+    0: '開局前挑的書箱決定了抽得到哪些字。「口」不會攻擊，但能讓旁邊的字打得更快。',
+    1: '飛白來了：走得快，路上的屏障擋不住牠，要靠射程和攻速。',
+    2: '抽到「鏟子」時，把它拖到盤面上的字，就能把那個字收回手上，換個位置再放。',
+    4: '頭目「焦痕」走得比大墨團快，記得在牠路過的地方多放幾個字。',
+  },
+  story: [
+    '食譜最後一頁，夾著一張摺了四折的紙條：',
+    '「先生要刪的那批字裡，有一個是我們家的姓。',
+    '娘說，以後報名字的時候，就寫成筆畫比較少的那個吧。」',
+  ],
+};

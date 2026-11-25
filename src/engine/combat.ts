@@ -48,7 +48,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     }
     const p = positionAt(n.path, e.d);
     let target: Tower | null = null;
-    let bestD = def.boss ? 2.6 : 2.1;
+    let bestD = def.boss ? 2.2 : 1.6;
     for (const t of n.towers) {
       if (t.locked || t.inked > 0) continue;
       const dist = Math.hypot(t.x + 0.5 - p.x, t.y + 0.5 - p.y);
@@ -57,9 +57,9 @@ export function runCombat(ctx: Ctx, n: GameState): void {
         target = t;
       }
     }
-    e.inkCool = TICK_RATE * (def.boss ? 3 : 4);
+    e.inkCool = TICK_RATE * (def.boss ? 4 : 5);
     if (target) {
-      target.inked = TICK_RATE * 3;
+      target.inked = TICK_RATE * 2;
       n.events.push({ t: 'ink', x: target.x, y: target.y });
       boardChanged = true;
     }
