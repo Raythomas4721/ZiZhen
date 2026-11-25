@@ -25,5 +25,6 @@
 - 終章（`rules.finale`）：頭目「無名」不會死，沒血或走到書頁都會變成字卡，並附一張搭檔字；字卡到手後這一波最多等 `FINALE_WAIT` 秒。沒收進字典也照樣有結局（`story`），收進去才看 `storyArchived`。隱藏字（`secret`）只有存檔找回後才會出現在書箱候選。
 - 每章的特殊規則都要有退路，不能讓人卡住。
 - 調整數值後要跑 simulate，確認亂放機器人第 1 章勝率 ≥ 70%、湊詞機器人各章勝率 ≥ 85%。
-- 存檔 key 是 `zizhen.save.v1`；改存檔格式時要升版號並寫遷移。
+- 存檔 key 是 `zizhen.save.v1`；改存檔格式時要升版號並寫遷移。設定（聲音、震動）另外放在 `zizhen.settings.v1`。
+- 音效全部用 Web Audio 現場合成（`src/ui/sound.ts`），不要加音檔；新的遊戲事件要聲音就加在 `soundForEvents`。
 - 引擎不能碰 DOM、時間或 `Math.random`，全部經由 state 和種子亂數，同一個種子一定重現同一局。

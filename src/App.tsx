@@ -6,6 +6,12 @@ import { Dictionary } from './ui/Dictionary';
 import { GameScreen } from './ui/GameScreen';
 import { loadSave, recordBox, recordFound, recordResult, type SaveData } from './ui/save';
 import { Shelf } from './ui/Shelf';
+import { unlockAudio } from './ui/sound';
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlockAudio, { capture: true });
+  window.addEventListener('keydown', unlockAudio, { capture: true });
+}
 
 type Screen =
   | { t: 'title' }

@@ -63,6 +63,7 @@ export function draw(ctx: Ctx, s: GameState): GameState {
   const pick = pickWeighted(n, pool, (i) => i.w)!;
   n.drawsSinceUseful = pick.kind === 'char' && useful(pick.v) ? 0 : n.drawsSinceUseful + 1;
   n.hand.push({ uid: n.nextId++, kind: pick.kind, v: pick.v, lv: 1 });
+  n.events.push({ t: 'drew' });
   return n;
 }
 
@@ -130,7 +131,10 @@ export function place(ctx: Ctx, s: GameState, uid: number, x: number, y: number)
   n.hand = n.hand.filter((h) => h.uid !== uid);
   const here = towerAt(n, x, y);
   if (here) levelUp(ctx, n, here);
-  else n.towers.push(newTower(ctx, n, card.v, card.lv, x, y));
+  else {
+    n.towers.push(newTower(ctx, n, card.v, card.lv, x, y));
+    n.events.push({ t: 'placed', x, y });
+  }
   refresh(ctx, n);
   return n;
 }

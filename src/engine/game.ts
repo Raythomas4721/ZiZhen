@@ -70,7 +70,7 @@ export function startWave(ctx: Ctx, s: GameState): GameState {
   if (s.phase !== 'prep') return s;
   const ch = chapterOf(ctx, s.chapter);
   const wave = ch.waves[s.wave];
-  return { ...s, phase: 'wave', waveTick: 0, spawns: buildSpawns(wave), events: [] };
+  return { ...s, phase: 'wave', waveTick: 0, spawns: buildSpawns(wave), events: [{ t: 'waveStart', wave: s.wave, boss: !!wave.boss }] };
 }
 
 /** 給 step 用的草稿：會被改到的物件都先複製。 */

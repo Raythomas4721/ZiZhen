@@ -55,6 +55,26 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
           fxRef.current.push({ kind: 'merge', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
         } else if (ev.t === 'ink') {
           fxRef.current.push({ kind: 'ink', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
+        } else if (ev.t === 'placed') {
+          fxRef.current.push({ kind: 'pop', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 300 });
+        } else if (ev.t === 'leak' && ev.dmg > 0) {
+          fxRef.current.push({ kind: 'shake', x: 0, y: 0, born: now, life: 250 });
+        } else if (ev.t === 'word' && ev.fresh) {
+          const w = s.words.find((x) => x.w === ev.w);
+          const i = s.idioms.find((x) => x.w === ev.w);
+          const cells = w ? [w.a, w.b] : i ? i.cells : [];
+          if (cells.length) {
+            const mx = cells.reduce((a, c) => a + c.x, 0) / cells.length + 0.5;
+            const my = cells.reduce((a, c) => a + c.y, 0) / cells.length + 0.5;
+            fxRef.current.push({ kind: 'text', x: mx, y: my - 0.2, text: ev.w, color: i ? '#b0891c' : '#b33a2b', born: now, life: 1100 });
+          }
+        } else if (ev.t === 'couplet' && ev.fresh) {
+          const c = s.couplets.find((x) => x.a === ev.a && x.b === ev.b);
+          if (c) {
+            const mx = c.cells.reduce((a, p) => a + p.x, 0) / 4 + 0.5;
+            const my = c.cells.reduce((a, p) => a + p.y, 0) / 4 + 0.5;
+            fxRef.current.push({ kind: 'text', x: mx, y: my, text: '對仗', color: '#b0891c', born: now, life: 1200 });
+          }
         } else if (ev.t === 'swap') {
           fxRef.current.push({ kind: 'swap', x: ev.a.x + 0.5, y: ev.a.y + 0.5, x2: ev.b.x + 0.5, y2: ev.b.y + 0.5, born: now, life: 700 });
         } else if (ev.t === 'idiom') {
@@ -67,7 +87,6 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
       const notable = events.filter((e) => e.t !== 'hit' && e.t !== 'kill');
       if (notable.length) setLastEvents(notable);
       onEventsRef.current?.(events);
-      void s;
     },
     [],
   );
@@ -82,6 +101,15 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
     },
     [handleEvents],
   );
+
+  // 切到別的分頁或鎖螢幕時自動暫停，回來要自己按繼續
+  useEffect(() => {
+    const on = () => {
+      if (document.hidden && stateRef.current.phase === 'wave') setPaused(true);
+    };
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, []);
 
   useEffect(() => {
     let raf = 0;

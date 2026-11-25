@@ -272,6 +272,9 @@ export type GameEvent =
   | { t: 'ink'; x: number; y: number }
   | { t: 'broken'; x: number; y: number }
   | { t: 'invalid'; reason: string }
+  | { t: 'placed'; x: number; y: number }
+  | { t: 'drew' }
+  | { t: 'waveStart'; wave: number; boss: boolean }
   | { t: 'compose'; a: string; b: string; out: string }
   | { t: 'idiomReady'; w: string }
   | { t: 'couplet'; a: string; b: string; fresh: boolean }

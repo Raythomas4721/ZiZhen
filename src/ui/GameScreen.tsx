@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, recipeFor, sell, towerAt } from '../engine/actions';
+import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, placeCheck, recipeFor, sell, towerAt } from '../engine/actions';
+import { baseStats } from '../engine/stats';
+import { soundForEvents, setSoundSettings } from './sound';
+import { loadSettings, saveSettings, type Settings } from './settings';
+import type { Hover } from './draw';
 import { chapterOf, type Ctx } from '../engine/ctx';
 import { createGame, starsOf, startWave } from '../engine/game';
 import { kindOf } from '../engine/stats';
@@ -61,8 +65,10 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   const knownRef = useRef(new Set(known));
   const showToast = (text: string) => setToast({ text, key: Date.now() });
   const onEvents = (evs: GameEvent[]) => {
+    soundForEvents(evs);
     const fresh: string[] = [];
     for (const e of evs) {
+      if (e.t === 'waveStart' && e.boss) showToast('頭目來了！');
       if (e.t === 'invalid') showToast(e.reason);
       if (e.t === 'waveEnd') showToast(e.held ? `守住了！+${e.bonus} 文` : `這頁被啃掉了… +${e.bonus} 文`);
       if (e.t === 'word') {
@@ -91,6 +97,13 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   const game = useGame(ctx, () => createGame(ctx, { chapter, seed: Date.now() % 100000, box }), onEvents);
   const s = game.state;
   const boardRef = useRef<BoardHandle>(null);
+  const [settings, setSettings] = useState<Settings>(loadSettings);
+  const toggleSound = () => {
+    const next = { ...settings, sound: !settings.sound };
+    setSettings(next);
+    saveSettings(next);
+    setSoundSettings(next);
+  };
   const cell = useCellSize(reachableIdioms(ctx, s).length ? 330 : 280);
   const [selected, setSelected] = useState<number | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -128,7 +141,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       if (!d) return;
       const moved = d.moved || Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 8;
       setDrag({ ...d, x: e.clientX, y: e.clientY, moved });
-      boardRef.current?.setHover(moved ? boardRef.current.cellAt(e.clientX, e.clientY) : null);
+      boardRef.current?.setHover(moved ? previewAt(d.src, e.clientX, e.clientY) : null);
     };
     const up = (e: PointerEvent) => {
       const d = dragRef.current;
@@ -160,6 +173,21 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag !== null]);
+
+  /** 拖曳預覽：這格放不放得下、放下後射程多大。 */
+  const previewAt = (src: DragSrc, clientX: number, clientY: number): Hover | null => {
+    const c = boardRef.current?.cellAt(clientX, clientY);
+    if (!c) return null;
+    const st = game.stateRef.current;
+    if (src.t === 'tower') {
+      const target = towerAt(st, c.x, c.y);
+      return { ...c, ok: !!target && (target.x !== src.from.x || target.y !== src.from.y) && canMerge({ ch: src.ch, lv: src.lv }, target) };
+    }
+    const ok = !placeCheck(ctx, st, src.card, c.x, c.y);
+    const here = towerAt(st, c.x, c.y);
+    const range = src.card.kind === 'char' && !here ? baseStats(ctx, src.card.v, src.card.lv).range : undefined;
+    return { ...c, ok, range };
+  };
 
   const onBoardDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const c = boardRef.current?.cellAt(e.clientX, e.clientY);
@@ -206,7 +234,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   const slots = Array.from({ length: Math.max(HAND_SIZE, s.hand.length) }, (_, i) => s.hand[i]);
 
   return (
-    <div className="game">
+    <div className="game" onContextMenu={(e) => e.preventDefault()}>
       <header className="hud">
         <button className="ghost" onClick={onExit}>
           ← 書架
@@ -216,7 +244,12 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
           {ch.waves[s.wave]?.boss ? ' 頭目' : ''}
         </div>
         <div className="hud-stats">
-          <span className="page">頁 {Math.max(0, Math.ceil(s.pageHp))}/{PAGE_HP}</span>
+          <button className="ghost icon" onClick={toggleSound} aria-label={settings.sound ? '關掉聲音' : '打開聲音'}>
+            {settings.sound ? '聲' : '靜'}
+          </button>
+          <span key={`p${s.pageHp}`} className={`page ${s.pageHp < PAGE_HP ? 'hit' : ''}`}>
+            頁 {Math.max(0, Math.ceil(s.pageHp))}/{PAGE_HP}
+          </span>
           <span className="coin">{s.coins} 文</span>
         </div>
       </header>

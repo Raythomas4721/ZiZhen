@@ -22,8 +22,16 @@ export const KIND_NAME: Record<Kind, string> = {
   light: '光環',
 };
 
+/** 拖曳時游標下的格子：ok 代表放得下，range 是放下後的射程。 */
+export interface Hover {
+  x: number;
+  y: number;
+  ok?: boolean;
+  range?: number;
+}
+
 export interface Fx {
-  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken' | 'swap' | 'flash';
+  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken' | 'swap' | 'flash' | 'text' | 'pop' | 'shake';
   x: number;
   y: number;
   x2?: number;
@@ -43,7 +51,7 @@ export function drawBoard(
   cell: number,
   fx: Fx[],
   now: number,
-  hover: { x: number; y: number } | null,
+  hover: Hover | null,
 ) {
   const W = COLS * cell;
   const H = ROWS * cell;
@@ -102,8 +110,20 @@ export function drawBoard(
   g.fillText('頁', (last.x + 0.5) * cell, (last.y + 0.53) * cell);
 
   if (hover) {
-    g.fillStyle = 'rgba(179,58,43,0.2)';
+    const ok = hover.ok ?? true;
+    g.fillStyle = ok ? 'rgba(93,122,58,0.28)' : 'rgba(179,58,43,0.28)';
     g.fillRect(hover.x * cell, hover.y * cell, cell, cell);
+    if (ok && hover.range) {
+      g.strokeStyle = 'rgba(93,122,58,0.7)';
+      g.fillStyle = 'rgba(93,122,58,0.07)';
+      g.lineWidth = 1.5;
+      g.setLineDash([5, 4]);
+      g.beginPath();
+      g.arc((hover.x + 0.5) * cell, (hover.y + 0.5) * cell, hover.range * cell, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.setLineDash([]);
+    }
   }
 
   // 詞的連線（畫在字塔底下）
@@ -240,6 +260,22 @@ export function drawBoard(
       g.moveTo(f.x * cell, f.y * cell);
       g.lineTo(f.x2 * cell, f.y2 * cell);
       g.stroke();
+    } else if (f.kind === 'text' && f.text) {
+      const rise = cell * 0.6 * age;
+      g.font = `900 ${cell * 0.36}px ${FONT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineWidth = 4;
+      g.strokeStyle = withAlpha('#fffaf0', a);
+      g.strokeText(f.text, f.x * cell, f.y * cell - rise);
+      g.fillStyle = withAlpha(f.color ?? '#b33a2b', a);
+      g.fillText(f.text, f.x * cell, f.y * cell - rise);
+    } else if (f.kind === 'pop') {
+      g.strokeStyle = withAlpha('#5d7a3a', a);
+      g.lineWidth = 2;
+      g.strokeRect((f.x - 0.5 + age * -0.1) * cell, (f.y - 0.5 + age * -0.1) * cell, cell * (1 + age * 0.2), cell * (1 + age * 0.2));
+    } else if (f.kind === 'shake') {
+      // 震動由 BoardCanvas 處理
     } else if (f.kind === 'flash') {
       g.fillStyle = withAlpha('#b0891c', a * 0.35);
       g.fillRect(0, 0, W, H);

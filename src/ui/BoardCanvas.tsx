@@ -1,12 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Ctx } from '../engine/ctx';
 import { COLS, ROWS, type GameState } from '../engine/types';
-import { drawBoard, type Fx } from './draw';
+import { drawBoard, type Fx, type Hover } from './draw';
 
 export interface BoardHandle {
   /** 螢幕座標換成格子；不在盤面上回傳 null。 */
   cellAt: (clientX: number, clientY: number) => { x: number; y: number } | null;
-  setHover: (c: { x: number; y: number } | null) => void;
+  setHover: (c: Hover | null) => void;
   element: () => HTMLCanvasElement | null;
 }
 
@@ -20,7 +20,7 @@ interface Props {
 
 export const BoardCanvas = forwardRef<BoardHandle, Props>(function BoardCanvas({ ctx, stateRef, fxRef, cell, onPointerDown }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hoverRef = useRef<{ x: number; y: number } | null>(null);
+  const hoverRef = useRef<Hover | null>(null);
 
   useImperativeHandle(ref, () => ({
     cellAt(clientX, clientY) {
@@ -48,9 +48,11 @@ export const BoardCanvas = forwardRef<BoardHandle, Props>(function BoardCanvas({
     let raf = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
       const now = performance.now();
       fxRef.current = fxRef.current.filter((f) => now - f.born < f.life);
+      const shake = fxRef.current.find((f) => f.kind === 'shake');
+      const amp = shake ? 3 * (1 - (now - shake.born) / shake.life) : 0;
+      g.setTransform(dpr, 0, 0, dpr, amp ? (Math.random() - 0.5) * amp * 2 * dpr : 0, amp ? (Math.random() - 0.5) * amp * 2 * dpr : 0);
       drawBoard(g, ctx, stateRef.current, cell, fxRef.current, now, hoverRef.current);
     };
     raf = requestAnimationFrame(loop);

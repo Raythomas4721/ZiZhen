@@ -90,7 +90,7 @@ button.ghost { background: transparent; border-color: transparent; padding: 0.3r
 .sell.drop { background: rgba(179, 58, 43, 0.15); border-color: var(--seal); color: var(--seal); }
 
 .ghost-card {
-  position: fixed; z-index: 50; pointer-events: none; width: 54px; height: 72px; transform: translate(-50%, -70%);
+  position: fixed; z-index: 50; pointer-events: none; width: 54px; height: 72px; transform: translate(-50%, -125%);
   border-radius: 8px; background: var(--paper-3); border: 2px solid var(--seal); display: grid; place-items: center;
   font-size: 1.9rem; font-weight: 700; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
@@ -139,3 +139,27 @@ button.ghost { background: transparent; border-color: transparent; padding: 0.3r
 .idiom.ready .idiom-meter { background: rgba(255, 250, 240, 0.4); }
 .idiom.ready .idiom-meter span { background: var(--paper-3); }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+/* ---- M9 打磨 ---- */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+.game {
+  padding-top: max(0.4rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+}
+.shelf, .title { padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+.card, .board, .ghost-card, .chip { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.card { animation: cardIn 0.22s ease-out; }
+@keyframes cardIn { from { transform: translateY(10px) scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.hud-stats .page.hit { animation: pageHit 0.45s ease-out; }
+@keyframes pageHit { 0% { transform: scale(1.35); color: #fff; background: var(--seal); border-radius: 4px; } 100% { transform: none; } }
+button.icon { font-size: 0.85rem; padding: 0.1rem 0.4rem; border: 1px solid rgba(91, 81, 74, 0.35); border-radius: 6px; }
+button:active:not(:disabled) { transform: scale(0.96); }
+.modal { animation: modalIn 0.3s ease-out; }
+@keyframes modalIn { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.title h1 { animation: inkIn 1.2s ease-out; }
+@keyframes inkIn { from { filter: blur(6px); opacity: 0; letter-spacing: 0.6em; } to { filter: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
