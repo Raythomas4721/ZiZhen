@@ -1,0 +1,62 @@
+import type { ChapterDef } from '../../engine/types';
+
+export const ch06: ChapterDef = {
+  id: 'ch06',
+  index: 6,
+  title: '終章',
+  book: '無名字典',
+  intro: '藏書閣最深處，有一本沒有書名的字典。前面學過的墨妖全都來了，最後一隻叫「無名」。這一路補回來的書頁都在說同一件事：書院曾經刪掉一批「沒人用的字」。',
+  // 從左下角繞一大圈往裡走，書頁在正中間
+  waypoints: [
+    { x: 0, y: 8 },
+    { x: 0, y: 0 },
+    { x: 6, y: 0 },
+    { x: 6, y: 6 },
+    { x: 2, y: 6 },
+    { x: 2, y: 2 },
+    { x: 4, y: 2 },
+    { x: 4, y: 4 },
+  ],
+  waves: [
+    { hp: 1.4, groups: [{ enemy: 'dot', count: 12, every: 1.4, delay: 1 }] },
+    { hp: 1.6, groups: [{ enemy: 'dot', count: 10, every: 1.3, delay: 1 }, { enemy: 'feibai', count: 5, every: 1.6, delay: 6 }] },
+    { hp: 1.75, groups: [{ enemy: 'blob', count: 4, every: 3.5, delay: 1 }, { enemy: 'tugai', count: 3, every: 4, delay: 4 }, { enemy: 'dot', count: 8, every: 1.2, delay: 8 }] },
+    { hp: 2.2, groups: [{ enemy: 'yinmo', count: 6, every: 1.5, delay: 1 }, { enemy: 'cuozi', count: 3, every: 4, delay: 5 }, { enemy: 'feibai', count: 6, every: 1.2, delay: 9 }] },
+    { hp: 1.3, boss: true, groups: [{ enemy: 'dot', count: 10, every: 1.2, delay: 1 }, { enemy: 'bigbrush', count: 1, every: 1, delay: 6 }, { enemy: 'jumble', count: 1, every: 1, delay: 24 }] },
+    { hp: 2.6, groups: [{ enemy: 'dot', count: 18, every: 0.8, delay: 1 }, { enemy: 'yinmo', count: 6, every: 2, delay: 4 }, { enemy: 'tugai', count: 3, every: 4, delay: 8 }] },
+    { hp: 3.0, groups: [{ enemy: 'blob', count: 9, every: 2.2, delay: 1 }, { enemy: 'feibai', count: 10, every: 1.0, delay: 5 }, { enemy: 'cuozi', count: 3, every: 4, delay: 9 }] },
+    { hp: 3.4, groups: [{ enemy: 'yinmo', count: 12, every: 1.0, delay: 1 }, { enemy: 'tugai', count: 4, every: 3, delay: 4 }, { enemy: 'blob', count: 4, every: 3, delay: 8 }] },
+    { hp: 3.8, groups: [{ enemy: 'blob', count: 12, every: 1.9, delay: 1 }, { enemy: 'feibai', count: 12, every: 0.9, delay: 4 }, { enemy: 'yinmo', count: 6, every: 1.5, delay: 8 }, { enemy: 'cuozi', count: 3, every: 5, delay: 10 }] },
+    { hp: 3.2, boss: true, groups: [{ enemy: 'dot', count: 14, every: 0.9, delay: 1 }, { enemy: 'nightink', count: 1, every: 1, delay: 6 }, { enemy: 'wuming', count: 1, every: 1, delay: 14 }] },
+  ],
+  unlock: ['光', '書', '文', '字', '紙', '筆', '墨'],
+  secret: ['霽'],
+  parts: ['氵', '青', '木', '日', '月'],
+  tools: ['shovel', 'brush', 'weight'],
+  startCoins: 65,
+  rules: {
+    startHand: [{ kind: 'tool', v: 'weight' }],
+    idiomHint: true,
+    couplets: true,
+    finale: { char: '霽' },
+  },
+  tips: {
+    0: '終章：前面學過的全部都會出現。書箱裡記得留「月」或「雪」，最後一波會用到。',
+    3: '隱墨、錯字、飛白一起來了。光環字和紙鎮都很重要。',
+    4: '兩隻頭目一前一後：先來的「塗改大筆」會塗黑字，後來的「顛倒」會換字。',
+    9: '最後一波。頭目「無名」打不死：沒血時，牠會變成一張字卡回到你手上，還會附上一張能跟它湊詞的字。',
+  },
+  story: [
+    '無名字典的最後一頁空著，只留下一個淡淡的墨印。',
+    '墨印的形狀，看得出是個「雨」字頭。',
+    '原來墨妖都是被刪掉的字。牠們啃書，只是想擠回書裡。',
+    '也許下一次，你能把它寫回去。',
+  ],
+  storyArchived: [
+    '無名字典的最後一頁，多了一個字：霽。',
+    '雨停了、雪停了，天放晴，就叫「霽」。這是那個孩子的姓。',
+    '原來墨妖都是被刪掉的字。牠們啃書，只是想擠回書裡。',
+    '字回到了字典，硯台就再也沒有打翻過。',
+    '阿簡把最後一張字卡收進書箱，吹熄了燈。',
+  ],
+};

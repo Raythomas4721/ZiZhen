@@ -2,6 +2,7 @@
 
 import { pathIndex, positionAt } from './board';
 import type { Ctx } from './ctx';
+import { becomeCard } from './finale';
 import { swapContent } from './idioms';
 import { refresh } from './refresh';
 import { roll } from './rng';
@@ -153,6 +154,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     }
     const def = ctx.enemies.get(e.def)!;
     const p = positions.get(e.id) ?? positionAt(n.path, e.d);
+    becomeCard(ctx, n, def);
     n.coins += def.reward;
     n.events.push({ t: 'kill', x: p.x, y: p.y, reward: def.reward });
   }

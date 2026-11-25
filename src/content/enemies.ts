@@ -11,5 +11,6 @@ export const enemies: EnemyDef[] = [
   { id: 'jumble', name: '顛倒', hp: 1500, speed: 0.45, reward: 50, leak: 6, bite: 50, swapper: true, boss: true, size: 0.64 },
   { id: 'yinmo', name: '隱墨', hp: 55, speed: 1.0, reward: 5, leak: 1, bite: 10, hidden: true, size: 0.34 },
   { id: 'nightink', name: '夜墨', hp: 1700, speed: 0.45, reward: 55, leak: 6, bite: 50, hidden: true, boss: true, size: 0.66 },
+  { id: 'wuming', name: '無名', hp: 2600, speed: 0.38, reward: 0, leak: 6, bite: 60, swapper: true, becomes: '霽', boss: true, size: 0.72 },
   { id: 'bigbrush', name: '塗改大筆', hp: 1300, speed: 0.45, reward: 50, leak: 6, bite: 50, inker: true, boss: true, size: 0.64 },
 ];

@@ -7,9 +7,11 @@ export interface SaveData {
   stars: Record<string, number>;
   found: string[];
   boxes: Record<string, string[]>;
+  /** 終章找回的字（之後挑書箱時可以選）。 */
+  secrets: string[];
 }
 
-const empty = (): SaveData => ({ v: 1, stars: {}, found: [], boxes: {} });
+const empty = (): SaveData => ({ v: 1, stars: {}, found: [], boxes: {}, secrets: [] });
 
 export function loadSave(): SaveData {
   try {
@@ -17,7 +19,7 @@ export function loadSave(): SaveData {
     if (!raw) return empty();
     const d = JSON.parse(raw) as Partial<SaveData>;
     if (d.v !== 1) return empty();
-    return { v: 1, stars: d.stars ?? {}, found: d.found ?? [], boxes: d.boxes ?? {} };
+    return { v: 1, stars: d.stars ?? {}, found: d.found ?? [], boxes: d.boxes ?? {}, secrets: d.secrets ?? [] };
   } catch {
     return empty();
   }
@@ -31,9 +33,10 @@ export function writeSave(d: SaveData) {
   }
 }
 
-export function recordResult(d: SaveData, chapter: string, stars: number, found: string[]): SaveData {
+export function recordResult(d: SaveData, chapter: string, stars: number, found: string[], secret?: string): SaveData {
   const next: SaveData = {
     ...d,
+    secrets: secret && !d.secrets.includes(secret) ? [...d.secrets, secret] : d.secrets,
     stars: { ...d.stars, [chapter]: Math.max(d.stars[chapter] ?? 0, stars) },
     found: [...d.found, ...found.filter((w) => !d.found.includes(w))],
   };

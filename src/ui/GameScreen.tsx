@@ -19,7 +19,7 @@ interface Props {
   known: string[];
   onExit: () => void;
   onFound: (words: string[]) => void;
-  onFinish: (stars: number, found: string[]) => void;
+  onFinish: (stars: number, found: string[], secret?: string) => void;
   onRetry: () => void;
 }
 
@@ -80,6 +80,8 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       }
       if (e.t === 'compose') showToast(`${e.a}＋${e.b}＝${e.out}`);
       if (e.t === 'idiomReady') showToast(`「${e.w}」集滿了！`);
+      if (e.t === 'becomeCard') showToast(`無名變成了一張字卡：「${e.ch}」`);
+      if (e.t === 'archived') showToast(`「${e.w}」！字收進字典了`);
       if (e.t === 'couplet' && e.fresh) showToast(`對仗！「${e.a}」對「${e.b}」`);
       if (e.t === 'idiom') showToast(`${e.w}！`);
       if (e.t === 'swap') showToast('錯字把兩個字對調了！');
@@ -187,15 +189,21 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
   useEffect(() => {
     if (s.phase === 'done' && !finishedRef.current) {
       finishedRef.current = true;
-      onFinish(starsOf(s.results), s.found);
+      onFinish(starsOf(s.results), s.found, s.archived ? ch.rules?.finale?.char : undefined);
     }
-  }, [s.phase, s.results, s.found, onFinish]);
+  }, [s.phase, s.results, s.found, s.archived, ch, onFinish]);
 
   const infoTower = info ? towerAt(s, info.x, info.y) : undefined;
   const selectedCard = selected !== null ? s.hand.find((h) => h.uid === selected) : undefined;
-  const tip = s.phase === 'prep' ? ch.tips?.[s.wave] : undefined;
+  const fin = ch.rules?.finale;
+  const finaleTip =
+    fin && !s.archived && s.phase === 'wave' && s.hand.some((h) => h.kind === 'char' && h.v === fin.char)
+      ? finaleHint(ctx, fin.char)
+      : undefined;
+  const tip = finaleTip ?? (s.phase === 'prep' ? ch.tips?.[s.wave] : undefined);
   const cost = drawCost(s);
-  const slots = Array.from({ length: HAND_SIZE }, (_, i) => s.hand[i]);
+  // 終章字卡可以讓手牌多一張
+  const slots = Array.from({ length: Math.max(HAND_SIZE, s.hand.length) }, (_, i) => s.hand[i]);
 
   return (
     <div className="game">
@@ -241,7 +249,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       <BoardCanvas ref={boardRef} ctx={ctx} stateRef={game.stateRef} fxRef={game.fxRef} cell={cell} onPointerDown={onBoardDown} />
 
       <div className="hand-row">
-        <div className="hand">
+        <div className="hand" style={{ gridTemplateColumns: `repeat(${slots.length}, 1fr)` }}>
           {slots.map((c, i) =>
             c ? (
               <CardView
@@ -292,7 +300,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       {s.phase === 'done' && (
         <div className="modal-bg">
           <div className="modal">
-            <h2>《{ch.book}》守住了</h2>
+            <h2>{fin ? (s.archived ? '終' : `《${ch.book}》守住了`) : `《${ch.book}》守住了`}</h2>
             <div className="big-stars">{'★'.repeat(starsOf(s.results)) + '☆'.repeat(3 - starsOf(s.results))}</div>
             <p className="muted" style={{ textAlign: 'center' }}>
               {s.results.filter((r) => r === 'lost').length === 0
@@ -301,7 +309,7 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
             </p>
             <p className="muted">補回來的書頁：</p>
             <div className="story">
-              {ch.story.map((line, i) => (
+              {(s.archived && ch.storyArchived ? ch.storyArchived : ch.story).map((line, i) => (
                 <p key={i}>{line}</p>
               ))}
             </div>
@@ -356,4 +364,15 @@ function TowerInfo({ ctx, s, t }: { ctx: Ctx; s: GameState; t: Tower }) {
       )}
     </div>
   );
+}
+
+/** 終章字卡到手時的提示：要放在哪個字的哪一邊。 */
+function finaleHint(ctx: Ctx, ch: string): string {
+  const ways: string[] = [];
+  for (const w of ctx.content.words) {
+    const [a, b] = [...w.w];
+    if (a === ch) ways.push(`放在「${b}」的左邊或上面（${w.w}）`);
+    else if (b === ch) ways.push(`放在「${a}」的右邊或下面（${w.w}）`);
+  }
+  return `把「${ch}」${ways.join('，或')}，就能把它收進字典。`;
 }

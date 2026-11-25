@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { boxCandidates, boxReport, boxSize, recommendBox } from '../engine/box';
+import { boxCandidates, boxReport, boxSize, finalePartners, recommendBox } from '../engine/box';
 import { chapterOf, idiomsWithin, wordsWithin, type Ctx } from '../engine/ctx';
 import { partnersOf } from '../engine/words';
 import { KIND_COLOR, KIND_NAME } from './draw';
@@ -9,13 +9,15 @@ interface Props {
   ctx: Ctx;
   chapter: string;
   last?: string[];
+  secrets?: string[];
   onBack: () => void;
   onStart: (box: string[]) => void;
 }
 
-export function BoxPicker({ ctx, chapter, last, onBack, onStart }: Props) {
+export function BoxPicker({ ctx, chapter, last, secrets, onBack, onStart }: Props) {
   const ch = chapterOf(ctx, chapter);
-  const cands = boxCandidates(ctx, chapter);
+  const cands = boxCandidates(ctx, chapter, secrets);
+  const finale = finalePartners(ctx, chapter);
   const size = boxSize(ctx, chapter);
   const valid = (b?: string[]) => !!b && b.length === size && b.every((c) => cands.includes(c));
   const [box, setBox] = useState<string[]>(() => (valid(last) ? last! : recommendBox(ctx, chapter)));
@@ -64,6 +66,11 @@ export function BoxPicker({ ctx, chapter, last, onBack, onStart }: Props) {
           );
         })}
       </div>
+      {finale.length > 0 && !box.some((c) => finale.includes(c)) && (
+        <p className="muted" style={{ color: 'var(--seal)' }}>
+          最後一波會用到「{finale.join('」或「')}」，建議留一個在書箱裡。
+        </p>
+      )}
       <p>
         這箱能湊出 <b>{rep.words}</b> 個詞
         {rep.weak.length > 0 && <span className="muted">（「{rep.weak.join('、')}」可能變死牌）</span>}

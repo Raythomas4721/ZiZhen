@@ -4,6 +4,7 @@ import type { Ctx } from './ctx';
 import { baseStats, kindOf, LIGHT_RANGE, SUPPORT_RATE } from './stats';
 import type { GameState, Tower } from './types';
 import { chapterOf } from './ctx';
+import { checkArchive } from './finale';
 import { findCouplets, findIdioms, findWords } from './words';
 
 function neighbors(towers: Tower[], t: Tower): Tower[] {
@@ -75,6 +76,7 @@ export function refresh(ctx: Ctx, s: GameState): string[] {
     // 對仗不記進字典本，只在剛排出來時提示
     s.events.push({ t: 'couplet', a: c.a, b: c.b, fresh: true });
   }
+  checkArchive(ctx, s);
   return fresh;
 }
 

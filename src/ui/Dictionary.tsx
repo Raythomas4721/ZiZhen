@@ -11,12 +11,14 @@ interface Props {
 /** 依照「第幾章開始湊得出來」把詞分組。 */
 function groups(ctx: Ctx): { book: string; words: (WordDef | IdiomDef)[] }[] {
   const seen = new Set<string>();
-  return ctx.content.chapters.map((ch) => {
+  const groups = ctx.content.chapters.map((ch) => {
     const pool = unlockedChars(ctx, ch.id);
     const ws = [...idiomsWithin(ctx, pool), ...wordsWithin(ctx, pool)].filter((w) => !seen.has(w.w));
     ws.forEach((w) => seen.add(w.w));
     return { book: ch.book, words: ws };
   });
+  const rest = [...ctx.content.idioms, ...ctx.content.words].filter((w) => !seen.has(w.w));
+  return rest.length ? [...groups, { book: '？？', words: rest }] : groups;
 }
 
 export function Dictionary({ ctx, save, onBack }: Props) {
@@ -31,7 +33,7 @@ export function Dictionary({ ctx, save, onBack }: Props) {
       </h2>
       {groups(ctx).map((g) => (
         <section key={g.book}>
-          <h3>《{g.book}》</h3>
+          <h3>{g.book === '？？' ? '終章之後' : `《${g.book}》`}</h3>
           <div className="word-list">
             {g.words.map((w) =>
               found.has(w.w) ? (

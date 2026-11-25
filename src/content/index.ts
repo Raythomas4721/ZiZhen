@@ -5,6 +5,7 @@ import { ch02 } from './chapters/ch02';
 import { ch03 } from './chapters/ch03';
 import { ch04 } from './chapters/ch04';
 import { ch05 } from './chapters/ch05';
+import { ch06 } from './chapters/ch06';
 import { chars } from './chars';
 import { enemies } from './enemies';
 import { idioms } from './idioms';
@@ -17,7 +18,7 @@ export const content: Content = {
   idioms,
   recipes,
   enemies,
-  chapters: [ch01, ch02, ch03, ch04, ch05],
+  chapters: [ch01, ch02, ch03, ch04, ch05, ch06],
 };
 
 export const ctx = buildCtx(content);

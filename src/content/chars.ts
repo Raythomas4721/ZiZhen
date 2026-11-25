@@ -34,4 +34,14 @@ export const chars: CharDef[] = [
   { ch: '雪', radical: '雨', kind: 'water' },
   { ch: '花', radical: '艸', kind: 'support' },
   { ch: '江', radical: '水', kind: 'water' },
+  // 第六章
+  { ch: '光', radical: '儿', kind: 'light' },
+  { ch: '書', radical: '曰', kind: 'wall' },
+  { ch: '文', radical: '文', kind: 'support' },
+  { ch: '字', radical: '子', kind: 'metal' },
+  { ch: '紙', radical: '糸', kind: 'wall' },
+  { ch: '筆', radical: '竹', kind: 'metal' },
+  { ch: '墨', radical: '土', kind: 'water' },
+  // 終章頭目化成的字：雨停天晴叫「霽」
+  { ch: '霽', radical: '雨', kind: 'light' },
 ];

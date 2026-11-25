@@ -1,7 +1,7 @@
 // 內容驗證：每一章都要守的規則。scripts/validate.ts 和測試都會跑。
 
 import { buildableCount, expandPath, inBounds } from './board';
-import { boxCandidates, boxReport, recommendBox } from './box';
+import { boxCandidates, boxReport, finalePartners, recommendBox } from './box';
 import { idiomsWithin, unlockedChars, wordsWithin, type Ctx } from './ctx';
 import { partnersOf } from './words';
 
@@ -100,6 +100,7 @@ export function validateContent(ctx: Ctx): string[] {
       if (n < 2) err(where, `「${x}」只能跟 ${n} 個字湊成詞（至少 2 個），會變死牌`);
     }
     const box = recommendBox(ctx, ch.id);
+    if (box.length !== Math.min(8, cands.length)) err(where, `推薦書箱有 ${box.length} 個字`);
     const rep = boxReport(ctx, box);
     if (rep.weak.length) err(where, `推薦書箱裡的「${rep.weak.join('、')}」湊不到 2 個詞`);
     const makeable = wordsWithin(ctx, cands).length;
@@ -112,6 +113,23 @@ export function validateContent(ctx: Ctx): string[] {
     if (ch.index >= IDIOM_FROM) {
       if (idiomsWithin(ctx, cands).length === 0) err(where, '湊不出任何成語');
       if (rep.idioms === 0) err(where, '推薦書箱裡湊不出成語');
+    }
+
+    // 終章與隱藏字
+    for (const x of ch.secret ?? []) {
+      if (!ctx.chars.has(x)) err(where, `隱藏字「${x}」沒有定義`);
+      const n = partnersOf(ctx, x, [...unlocked, ...(ch.secret ?? [])]).length;
+      if (n < 2) err(where, `隱藏字「${x}」只能跟 ${n} 個字湊成詞（至少 2 個）`);
+    }
+    const fin = ch.rules?.finale;
+    if (fin) {
+      if (!ctx.chars.has(fin.char)) err(where, `終章字「${fin.char}」沒有定義`);
+      const boss = ch.waves.flatMap((w) => w.groups).some((g) => ctx.enemies.get(g.enemy)?.becomes === fin.char);
+      if (!boss) err(where, `沒有會變成「${fin.char}」的頭目`);
+      const partners = finalePartners(ctx, ch.id);
+      if (!partners.length) err(where, `終章字「${fin.char}」湊不成任何詞`);
+      if (!box.some((c) => partners.includes(c))) err(where, `推薦書箱裡沒有能跟「${fin.char}」湊詞的字（${partners.join('、')}）`);
+      if (!ch.storyArchived?.length) err(where, '終章少了收進字典後的結局');
     }
 
     // 部件

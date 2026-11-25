@@ -37,6 +37,11 @@ export function Shelf({ ctx, save, onBack, onPlay, onDictionary }: Props) {
           </button>
         );
       })}
+      {save.secrets.length > 0 && (
+        <p className="muted" style={{ textAlign: 'center' }}>
+          字典裡多了一個字：<b style={{ color: 'var(--ink)' }}>{save.secrets.join('、')}</b>。再守《無名字典》時可以把它挑進書箱。
+        </p>
+      )}
       {onDictionary && (
         <button style={{ marginTop: '0.6rem', width: '100%' }} onClick={onDictionary}>
           字典本（{save.found.length} / {ctx.content.words.length + ctx.content.idioms.length}）

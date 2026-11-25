@@ -3,6 +3,7 @@
 import { expandPath, pathEnd, positionAt } from './board';
 import { limitByBlockers, runCombat } from './combat';
 import { chapterOf, type Ctx } from './ctx';
+import { becomeCard } from './finale';
 import { chargeIdioms, restoreSwaps, tickSwaps } from './idioms';
 import { PAGE_HP, TICK_RATE, type Enemy, type GameState, type Spawn, type WaveDef } from './types';
 
@@ -34,6 +35,8 @@ export function createGame(ctx: Ctx, opts: NewGameOptions): GameState {
     charge: {},
     swaps: [],
     shield: 0,
+    archived: false,
+    finaleWait: 0,
     hand: [],
     box: [...box],
     coins: ch.startCoins,
@@ -133,6 +136,7 @@ export function step(ctx: Ctx, s: GameState): GameState {
   for (const e of n.enemies) {
     if (e.d >= end) {
       const def = ctx.enemies.get(e.def)!;
+      becomeCard(ctx, n, def);
       const dmg = n.shield > 0 ? 0 : def.leak;
       n.pageHp -= dmg;
       n.events.push({ t: 'leak', dmg });
@@ -144,6 +148,7 @@ export function step(ctx: Ctx, s: GameState): GameState {
   tickSwaps(ctx, n);
   chargeIdioms(ctx, n);
   if (n.shield > 0) n.shield--;
+  if (n.finaleWait > 0) n.finaleWait--;
 
   return checkWaveEnd(ctx, n);
 }
@@ -151,7 +156,8 @@ export function step(ctx: Ctx, s: GameState): GameState {
 function checkWaveEnd(ctx: Ctx, n: GameState): GameState {
   const ch = chapterOf(ctx, n.chapter);
   const lost = n.pageHp <= 0;
-  const cleared = n.spawns.length === 0 && n.enemies.length === 0;
+  // 終章字卡剛到手：墨妖清光了也先等玩家把字放上去
+  const cleared = n.spawns.length === 0 && n.enemies.length === 0 && n.finaleWait <= 0;
   if (!lost && !cleared) return n;
   const held = !lost;
   const bonus = held ? 15 + 3 * n.wave : 10;

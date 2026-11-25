@@ -129,6 +129,33 @@ function coupletScore(ctx: Ctx, s: GameState, ch: string, x: number, y: number):
   return Math.max(0, findCouplets(ctx, findWords(ctx, trial)).length - s.couplets.length);
 }
 
+/** 終章字卡：先找能直接連成詞的空格；沒有就把搭檔字和它一起放成一對。 */
+function placeFinale(ctx: Ctx, s: GameState): GameState {
+  const fin = chapterOf(ctx, s.chapter).rules?.finale?.char;
+  if (!fin) return s;
+  const card = s.hand.find((h) => h.kind === 'char' && h.v === fin);
+  if (!card) return s;
+  const direct = freeGrass(s).find((p) => wordsAt(ctx, s, fin, p.x, p.y) > 0);
+  if (direct) return place(ctx, s, card.uid, direct.x, direct.y);
+  const free = new Set(freeGrass(s).map((p) => `${p.x},${p.y}`));
+  for (const mate of s.hand) {
+    if (mate.kind !== 'char' || mate.uid === card.uid) continue;
+    for (const p of freeGrass(s)) {
+      for (const [dx, dy] of [
+        [1, 0],
+        [0, 1],
+      ]) {
+        const q = { x: p.x + dx, y: p.y + dy };
+        if (!free.has(`${q.x},${q.y}`)) continue;
+        // p 在左（上），q 在右（下）
+        if (ctx.words.has(fin + mate.v)) return place(ctx, place(ctx, s, card.uid, p.x, p.y), mate.uid, q.x, q.y);
+        if (ctx.words.has(mate.v + fin)) return place(ctx, place(ctx, s, mate.uid, p.x, p.y), card.uid, q.x, q.y);
+      }
+    }
+  }
+  return s;
+}
+
 /** 集滿的成語：墨妖夠多或頭目在場就放。 */
 function castReady(ctx: Ctx, s: GameState, always: boolean): GameState {
   for (const [w, c] of Object.entries(s.charge)) {
@@ -229,6 +256,7 @@ interface SmartOpts {
 function smart(opts: SmartOpts): Bot {
   return (ctx, s) => {
     s = castReady(ctx, s, false);
+    if (opts.words) s = placeFinale(ctx, s);
     s = drawAll(ctx, s);
     s = combineParts(ctx, s);
     s = mergeHand(ctx, s);

@@ -100,6 +100,8 @@ export interface EnemyDef {
   swapper?: boolean;
   /** 隱墨：看不見，要靠光環字照出來，或走到離書頁很近才現形。 */
   hidden?: boolean;
+  /** 終章頭目：不會死，沒血時變成這個字的字卡。 */
+  becomes?: string;
   boss?: boolean;
   /** 畫面上的大小（格）。 */
   size: number;
@@ -128,6 +130,8 @@ export interface ChapterRules {
   idiomHint?: boolean;
   /** 對仗：同類的兩個詞上下（或左右）並排，四個字都變強。 */
   couplets?: boolean;
+  /** 終章：把這個字連成詞，就收進字典、故事收尾。 */
+  finale?: { char: string };
 }
 
 export interface ChapterDef {
@@ -151,6 +155,10 @@ export interface ChapterDef {
   tips?: Record<number, string>;
   /** 守住以後補回來的書頁。 */
   story: string[];
+  /** 終章有把字收進字典時，改用這段結局。 */
+  storyArchived?: string[];
+  /** 通關後才會出現在書箱裡的字。 */
+  secret?: string[];
 }
 
 export interface Content {
@@ -267,6 +275,8 @@ export type GameEvent =
   | { t: 'compose'; a: string; b: string; out: string }
   | { t: 'idiomReady'; w: string }
   | { t: 'couplet'; a: string; b: string; fresh: boolean }
+  | { t: 'becomeCard'; ch: string }
+  | { t: 'archived'; w: string }
   | { t: 'idiom'; w: string }
   | { t: 'swap'; a: Cell; b: Cell }
   | { t: 'waveEnd'; held: boolean; bonus: number };
@@ -293,6 +303,10 @@ export interface GameState {
   swaps: Swap[];
   /** 書頁還有幾個 tick 不會被啃。 */
   shield: number;
+  /** 終章：已經把字收進字典。 */
+  archived: boolean;
+  /** 終章：字卡到手後，這一波還會等玩家幾個 tick。 */
+  finaleWait: number;
   hand: Card[];
   box: string[];
   coins: number;

@@ -20,7 +20,7 @@ export function App() {
 
   const onFound = useCallback((ws: string[]) => setSave((d) => recordFound(d, ws)), []);
   const onFinish = useCallback(
-    (chapter: string) => (stars: number, found: string[]) => setSave((d) => recordResult(d, chapter, stars, found)),
+    (chapter: string) => (stars: number, found: string[], secret?: string) => setSave((d) => recordResult(d, chapter, stars, found, secret)),
     [],
   );
 
@@ -52,6 +52,7 @@ export function App() {
         ctx={ctx}
         chapter={screen.chapter}
         last={save.boxes[screen.chapter]}
+        secrets={save.secrets}
         onBack={() => setScreen({ t: 'shelf' })}
         onStart={(box) => {
           setSave((d) => recordBox(d, screen.chapter, box));
