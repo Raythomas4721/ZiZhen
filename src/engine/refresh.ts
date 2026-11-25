@@ -3,7 +3,7 @@
 import type { Ctx } from './ctx';
 import { baseStats, kindOf, LIGHT_RANGE, SUPPORT_RATE } from './stats';
 import type { GameState, Tower } from './types';
-import { findWords } from './words';
+import { findIdioms, findWords } from './words';
 
 function neighbors(towers: Tower[], t: Tower): Tower[] {
   return towers.filter((o) => o !== t && Math.abs(o.x - t.x) <= 1 && Math.abs(o.y - t.y) <= 1);
@@ -11,8 +11,9 @@ function neighbors(towers: Tower[], t: Tower): Tower[] {
 
 /** 在草稿狀態上重算；回傳這次新發現的詞。 */
 export function refresh(ctx: Ctx, s: GameState): string[] {
-  const before = new Set(s.words.map((w) => w.w));
+  const before = new Set([...s.words.map((w) => w.w), ...s.idioms.map((w) => w.w)]);
   s.words = findWords(ctx, s.towers);
+  s.idioms = findIdioms(ctx, s.towers);
 
   for (const t of s.towers) {
     const st = baseStats(ctx, t.ch, t.lv);
@@ -50,7 +51,7 @@ export function refresh(ctx: Ctx, s: GameState): string[] {
   }
 
   const fresh: string[] = [];
-  for (const w of s.words) {
+  for (const w of [...s.words, ...s.idioms]) {
     if (!before.has(w.w)) {
       const isNew = !s.found.includes(w.w);
       if (isNew) {

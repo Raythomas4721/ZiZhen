@@ -60,6 +60,25 @@ export interface RecipeDef {
 
 export type ToolId = 'shovel' | 'brush' | 'weight';
 
+/** 成語大招的效果。 */
+export type IdiomEffect =
+  /** 全場受到最大血量幾成的傷害（頭目只吃三分之一），再燒幾秒。 */
+  | { kind: 'blast'; frac: number; burnSec: number }
+  /** 全場往回推幾格（頭目只推三分之一）。 */
+  | { kind: 'push'; cells: number }
+  /** 全場凍住幾秒（頭目只凍三分之一）。 */
+  | { kind: 'freeze'; sec: number }
+  /** 書頁回血，並在幾秒內不會被啃。 */
+  | { kind: 'shield'; heal: number; sec: number };
+
+export interface IdiomDef {
+  w: string;
+  effect: IdiomEffect;
+  /** 排好以後要集氣幾秒。 */
+  charge: number;
+  note: string;
+}
+
 export interface EnemyDef {
   id: string;
   name: string;
@@ -75,6 +94,8 @@ export interface EnemyDef {
   flying?: boolean;
   /** 塗改：會把附近的字塗黑。 */
   inker?: boolean;
+  /** 錯字：會把附近一個詞的兩個字對調。 */
+  swapper?: boolean;
   boss?: boolean;
   /** 畫面上的大小（格）。 */
   size: number;
@@ -99,6 +120,8 @@ export interface WaveDef {
 export interface ChapterRules {
   /** 開局手上就有的卡。 */
   startHand?: { kind: CardKind; v: string }[];
+  /** 成語直接把整句亮出來，不用自己猜。 */
+  idiomHint?: boolean;
 }
 
 export interface ChapterDef {
@@ -127,6 +150,7 @@ export interface ChapterDef {
 export interface Content {
   chars: CharDef[];
   words: WordDef[];
+  idioms: IdiomDef[];
   recipes: RecipeDef[];
   enemies: EnemyDef[];
   chapters: ChapterDef[];
@@ -186,8 +210,21 @@ export interface Enemy {
   frozen: number;
   burnDps: number;
   burnLeft: number;
-  /** 塗改的冷卻。 */
+  /** 塗改、錯字的冷卻。 */
   inkCool: number;
+}
+
+/** 被錯字對調的兩座字塔，時間到會換回來。 */
+export interface Swap {
+  a: number;
+  b: number;
+  left: number;
+}
+
+export interface ActiveIdiom {
+  w: string;
+  cells: Cell[];
+  dir: 'h' | 'v';
 }
 
 export interface Spawn {
@@ -213,6 +250,9 @@ export type GameEvent =
   | { t: 'broken'; x: number; y: number }
   | { t: 'invalid'; reason: string }
   | { t: 'compose'; a: string; b: string; out: string }
+  | { t: 'idiomReady'; w: string }
+  | { t: 'idiom'; w: string }
+  | { t: 'swap'; a: Cell; b: Cell }
   | { t: 'waveEnd'; held: boolean; bonus: number };
 
 export type Phase = 'prep' | 'wave' | 'done';
@@ -230,6 +270,12 @@ export interface GameState {
   enemies: Enemy[];
   towers: Tower[];
   words: ActiveWord[];
+  idioms: ActiveIdiom[];
+  /** 每個成語的集氣（0～1）。 */
+  charge: Record<string, number>;
+  swaps: Swap[];
+  /** 書頁還有幾個 tick 不會被啃。 */
+  shield: number;
   hand: Card[];
   box: string[];
   coins: number;
@@ -239,7 +285,7 @@ export interface GameState {
   results: ('held' | 'lost')[];
   lostStreak: number;
   assist: number;
-  /** 這一局發現過的詞。 */
+  /** 這一局發現過的詞和成語。 */
   found: string[];
   nextId: number;
   events: GameEvent[];

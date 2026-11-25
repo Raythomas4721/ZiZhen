@@ -3,6 +3,7 @@
 import { expandPath, pathEnd, positionAt } from './board';
 import { limitByBlockers, runCombat } from './combat';
 import { chapterOf, type Ctx } from './ctx';
+import { chargeIdioms, restoreSwaps, tickSwaps } from './idioms';
 import { PAGE_HP, TICK_RATE, type Enemy, type GameState, type Spawn, type WaveDef } from './types';
 
 export interface NewGameOptions {
@@ -28,6 +29,10 @@ export function createGame(ctx: Ctx, opts: NewGameOptions): GameState {
     enemies: [],
     towers: [],
     words: [],
+    idioms: [],
+    charge: {},
+    swaps: [],
+    shield: 0,
     hand: [],
     box: [...box],
     coins: ch.startCoins,
@@ -126,13 +131,17 @@ export function step(ctx: Ctx, s: GameState): GameState {
   for (const e of n.enemies) {
     if (e.d >= end) {
       const def = ctx.enemies.get(e.def)!;
-      n.pageHp -= def.leak;
-      n.events.push({ t: 'leak', dmg: def.leak });
+      const dmg = n.shield > 0 ? 0 : def.leak;
+      n.pageHp -= dmg;
+      n.events.push({ t: 'leak', dmg });
     } else kept.push(e);
   }
   n.enemies = kept;
 
   runCombat(ctx, n);
+  tickSwaps(ctx, n);
+  chargeIdioms(ctx, n);
+  if (n.shield > 0) n.shield--;
 
   return checkWaveEnd(ctx, n);
 }
@@ -150,9 +159,11 @@ function checkWaveEnd(ctx: Ctx, n: GameState): GameState {
   // 連續兩波沒守住，下一波悄悄變弱；守住就恢復。
   n.assist = n.lostStreak >= 2 ? 0.85 : 1;
   n.events.push({ t: 'waveEnd', held, bonus });
+  restoreSwaps(ctx, n);
   n.enemies = [];
   n.spawns = [];
   n.pageHp = PAGE_HP;
+  n.shield = 0;
   n.wave++;
   n.waveTick = 0;
   n.drawsThisWave = 0;

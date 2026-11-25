@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { boxCandidates, boxReport, boxSize, recommendBox } from '../engine/box';
-import { chapterOf, wordsWithin, type Ctx } from '../engine/ctx';
+import { chapterOf, idiomsWithin, wordsWithin, type Ctx } from '../engine/ctx';
 import { partnersOf } from '../engine/words';
 import { KIND_COLOR, KIND_NAME } from './draw';
 import { TOOL_INFO } from './CardView';
@@ -69,6 +69,16 @@ export function BoxPicker({ ctx, chapter, last, onBack, onStart }: Props) {
         {rep.weak.length > 0 && <span className="muted">（「{rep.weak.join('、')}」可能變死牌）</span>}
       </p>
       <p className="muted">{wordsWithin(ctx, box).map((w) => w.w).join('、') || '還湊不出詞'}</p>
+      {ctx.content.idioms.length > 0 && ch.index >= 4 && (
+        <p>
+          成語：
+          {idiomsWithin(ctx, box).length ? (
+            <b>{idiomsWithin(ctx, box).map((w) => (ch.rules?.idiomHint ? w.w : `${[...w.w][0]}？？？`)).join('、')}</b>
+          ) : (
+            <span className="muted">這箱排不出成語</span>
+          )}
+        </p>
+      )}
       {(ch.parts.length > 0 || ch.tools.length > 0) && (
         <p className="muted">
           {ch.parts.length > 0 && <>這章還會抽到部件：{ch.parts.join('、')}。</>}

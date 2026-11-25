@@ -7,7 +7,9 @@ import { COLS, HAND_SIZE, PAGE_HP, TICK_RATE, type Card, type Cell, type GameEve
 import { KIND_NAME } from './draw';
 import { BoardCanvas, type BoardHandle } from './BoardCanvas';
 import { CardView, cardGlyph, TOOL_INFO } from './CardView';
+import { IdiomBar, reachableIdioms } from './IdiomBar';
 import { useGame } from './useGame';
+import { castIdiom } from '../engine/idioms';
 
 interface Props {
   ctx: Ctx;
@@ -21,14 +23,17 @@ interface Props {
   onRetry: () => void;
 }
 
-function useCellSize() {
-  const calc = () => Math.floor(Math.min(window.innerWidth - 12, 448, (window.innerHeight - 250) * (7 / 9)) / COLS);
+/** 格子大小：寬度和高度都要塞得下（reserve 是盤面以外的介面高度）。 */
+function useCellSize(reserve: number) {
+  const calc = () => Math.floor(Math.min(window.innerWidth - 12, 448, (window.innerHeight - reserve) * (7 / 9)) / COLS);
   const [cell, setCell] = useState(calc);
   useEffect(() => {
     const on = () => setCell(calc());
+    on();
     window.addEventListener('resize', on);
     return () => window.removeEventListener('resize', on);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reserve]);
   return cell;
 }
 
@@ -61,7 +66,8 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
       if (e.t === 'invalid') showToast(e.reason);
       if (e.t === 'waveEnd') showToast(e.held ? `守住了！+${e.bonus} 文` : `這頁被啃掉了… +${e.bonus} 文`);
       if (e.t === 'word') {
-        const def = ctx.words.get(e.w);
+        const def = ctx.words.get(e.w) ?? ctx.idioms.get(e.w);
+        const isIdiom = ctx.idioms.has(e.w);
         const isNew = !knownRef.current.has(e.w);
         if (isNew) {
           knownRef.current.add(e.w);
@@ -69,16 +75,20 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
         }
         // 塗黑又恢復時也會重新連詞，只有真的新詞才跳提示
         if (isNew || e.fresh) setWordNote({ w: e.w, note: def?.note ?? '', fresh: isNew });
-        if (isNew) showToast(`新詞「${e.w}」！`);
+        if (isNew) showToast(isIdiom ? `排出成語「${e.w}」！開始集氣` : `新詞「${e.w}」！`);
+        else if (isIdiom && e.fresh) showToast(`「${e.w}」開始集氣`);
       }
       if (e.t === 'compose') showToast(`${e.a}＋${e.b}＝${e.out}`);
+      if (e.t === 'idiomReady') showToast(`「${e.w}」集滿了！`);
+      if (e.t === 'idiom') showToast(`${e.w}！`);
+      if (e.t === 'swap') showToast('錯字把兩個字對調了！');
     }
     if (fresh.length) onFound(fresh);
   };
   const game = useGame(ctx, () => createGame(ctx, { chapter, seed: Date.now() % 100000, box }), onEvents);
   const s = game.state;
   const boardRef = useRef<BoardHandle>(null);
-  const cell = useCellSize();
+  const cell = useCellSize(reachableIdioms(ctx, s).length ? 330 : 280);
   const [selected, setSelected] = useState<number | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -260,6 +270,8 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
           <div className={`sell ${dragging?.t === 'card' ? 'drop' : ''}`}>拖來賣</div>
         </div>
       </div>
+
+      <IdiomBar ctx={ctx} s={s} known={knownRef.current} onCast={(w) => game.act((st) => castIdiom(ctx, st, w))} />
 
       <div className="controls">
         {s.phase === 'prep' && (

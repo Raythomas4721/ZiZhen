@@ -55,6 +55,10 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
           fxRef.current.push({ kind: 'merge', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
         } else if (ev.t === 'ink') {
           fxRef.current.push({ kind: 'ink', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
+        } else if (ev.t === 'swap') {
+          fxRef.current.push({ kind: 'swap', x: ev.a.x + 0.5, y: ev.a.y + 0.5, x2: ev.b.x + 0.5, y2: ev.b.y + 0.5, born: now, life: 700 });
+        } else if (ev.t === 'idiom') {
+          fxRef.current.push({ kind: 'flash', x: 0, y: 0, born: now, life: 700 });
         } else if (ev.t === 'broken') {
           fxRef.current.push({ kind: 'broken', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
         }

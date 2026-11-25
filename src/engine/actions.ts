@@ -51,7 +51,12 @@ export function draw(ctx: Ctx, s: GameState): GameState {
   const onTable = [...n.towers.map((t) => t.ch), ...n.hand.filter((h) => h.kind === 'char').map((h) => h.v)];
   const useful = (v: string) => partnersOf(ctx, v, onTable).length > 0;
   let pool = drawPool(ctx, n);
-  if (n.drawsSinceUseful >= GUARANTEE_AFTER && onTable.length > 0) {
+  const attacks = (v: string) => kindOf(ctx, v) !== 'support';
+  if (!onTable.some(attacks)) {
+    // 保底：盤面和手上都沒有會攻擊的字時，一定抽到會攻擊的字
+    const fighters = pool.filter((p) => p.kind === 'char' && attacks(p.v));
+    if (fighters.length) pool = fighters;
+  } else if (n.drawsSinceUseful >= GUARANTEE_AFTER && onTable.length > 0) {
     const helpful = pool.filter((p) => p.kind === 'char' && useful(p.v));
     if (helpful.length) pool = helpful;
   }

@@ -39,7 +39,7 @@ export function Shelf({ ctx, save, onBack, onPlay, onDictionary }: Props) {
       })}
       {onDictionary && (
         <button style={{ marginTop: '0.6rem', width: '100%' }} onClick={onDictionary}>
-          字典本（{save.found.length} / {ctx.content.words.length} 個詞）
+          字典本（{save.found.length} / {ctx.content.words.length + ctx.content.idioms.length}）
         </button>
       )}
     </div>

@@ -1,10 +1,11 @@
-import type { ChapterDef, CharDef, Content, EnemyDef, RecipeDef, WordDef } from './types';
+import type { ChapterDef, CharDef, Content, EnemyDef, IdiomDef, RecipeDef, WordDef } from './types';
 
 /** 把內容整理成查表用的形狀。 */
 export interface Ctx {
   content: Content;
   chars: Map<string, CharDef>;
   words: Map<string, WordDef>;
+  idioms: Map<string, IdiomDef>;
   enemies: Map<string, EnemyDef>;
   chapters: Map<string, ChapterDef>;
   recipes: RecipeDef[];
@@ -15,6 +16,7 @@ export function buildCtx(content: Content): Ctx {
     content,
     chars: new Map(content.chars.map((c) => [c.ch, c])),
     words: new Map(content.words.map((w) => [w.w, w])),
+    idioms: new Map(content.idioms.map((w) => [w.w, w])),
     enemies: new Map(content.enemies.map((e) => [e.id, e])),
     chapters: new Map(content.chapters.map((c) => [c.id, c])),
     recipes: content.recipes,
@@ -42,4 +44,10 @@ export function unlockedChars(ctx: Ctx, chapterId: string): string[] {
 export function wordsWithin(ctx: Ctx, chars: string[]): WordDef[] {
   const set = new Set(chars);
   return ctx.content.words.filter((w) => [...w.w].every((c) => set.has(c)));
+}
+
+/** 只用這些字就湊得出來的成語。 */
+export function idiomsWithin(ctx: Ctx, chars: string[]): IdiomDef[] {
+  const set = new Set(chars);
+  return ctx.content.idioms.filter((w) => [...w.w].every((c) => set.has(c)));
 }

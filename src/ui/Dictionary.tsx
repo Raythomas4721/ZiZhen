@@ -1,5 +1,5 @@
-import { unlockedChars, wordsWithin, type Ctx } from '../engine/ctx';
-import type { WordDef } from '../engine/types';
+import { idiomsWithin, unlockedChars, wordsWithin, type Ctx } from '../engine/ctx';
+import type { IdiomDef, WordDef } from '../engine/types';
 import type { SaveData } from './save';
 
 interface Props {
@@ -9,10 +9,11 @@ interface Props {
 }
 
 /** 依照「第幾章開始湊得出來」把詞分組。 */
-function groups(ctx: Ctx): { book: string; words: WordDef[] }[] {
+function groups(ctx: Ctx): { book: string; words: (WordDef | IdiomDef)[] }[] {
   const seen = new Set<string>();
   return ctx.content.chapters.map((ch) => {
-    const ws = wordsWithin(ctx, unlockedChars(ctx, ch.id)).filter((w) => !seen.has(w.w));
+    const pool = unlockedChars(ctx, ch.id);
+    const ws = [...idiomsWithin(ctx, pool), ...wordsWithin(ctx, pool)].filter((w) => !seen.has(w.w));
     ws.forEach((w) => seen.add(w.w));
     return { book: ch.book, words: ws };
   });
@@ -26,7 +27,7 @@ export function Dictionary({ ctx, save, onBack }: Props) {
         ← 書架
       </button>
       <h2>
-        字典本　<span className="muted">{found.size} / {ctx.content.words.length}</span>
+        字典本　<span className="muted">{found.size} / {ctx.content.words.length + ctx.content.idioms.length}</span>
       </h2>
       {groups(ctx).map((g) => (
         <section key={g.book}>
@@ -40,7 +41,7 @@ export function Dictionary({ ctx, save, onBack }: Props) {
                 </div>
               ) : (
                 <div key={w.w} className="word-item unknown">
-                  <b>{[...w.w][0]}？</b>
+                  <b>{[...w.w][0]}{'？'.repeat([...w.w].length - 1)}</b>
                   <small>還沒連出來過</small>
                 </div>
               ),

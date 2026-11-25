@@ -5,7 +5,9 @@ import { pathIndex } from '../engine/board';
 import type { Ctx } from '../engine/ctx';
 import { kindOf } from '../engine/stats';
 import { COLS, ROWS, type Card, type Cell, type GameState, type ToolId } from '../engine/types';
+import { castIdiom } from '../engine/idioms';
 import { pairs } from '../engine/words';
+import { reachableIdioms } from '../engine/box';
 
 export type Rand = () => number;
 export type Bot = (ctx: Ctx, s: GameState, rand: Rand) => GameState;
@@ -69,6 +71,64 @@ function potential(ctx: Ctx, s: GameState, ch: string, x: number, y: number): nu
   return n;
 }
 
+/** 把字放在這格，對排成語有多大幫助：同一條線上已經排對的字越多越好。 */
+const gridCache = new WeakMap<GameState, { at: Map<string, string>; path: Set<string> }>();
+function grid(s: GameState) {
+  let g = gridCache.get(s);
+  if (!g) {
+    g = { at: new Map(s.towers.map((t) => [`${t.x},${t.y}`, t.ch])), path: new Set(s.path.map((p) => `${p.x},${p.y}`)) };
+    gridCache.set(s, g);
+  }
+  return g;
+}
+
+function idiomScore(ctx: Ctx, s: GameState, ch: string, x: number, y: number): number {
+  const list = reachableIdioms(ctx, s.chapter, s.box);
+  if (!list.length) return 0;
+  const { at, path } = grid(s);
+  let best = 0;
+  for (const def of list) {
+    const cs = [...def.w];
+    cs.forEach((c, i) => {
+      if (c !== ch) return;
+      for (const [dx, dy] of [
+        [1, 0],
+        [0, 1],
+      ]) {
+        let ok = true;
+        let have = 0;
+        for (let k = 0; k < 4; k++) {
+          const cx = x + dx * (k - i);
+          const cy = y + dy * (k - i);
+          if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS || path.has(`${cx},${cy}`)) {
+            ok = false;
+            break;
+          }
+          if (k === i) continue;
+          const t = at.get(`${cx},${cy}`);
+          if (t && t !== cs[k]) {
+            ok = false;
+            break;
+          }
+          if (t) have++;
+        }
+        if (ok) best = Math.max(best, 1 + have * 2);
+      }
+    });
+  }
+  return best;
+}
+
+/** 集滿的成語：墨妖夠多或頭目在場就放。 */
+function castReady(ctx: Ctx, s: GameState, always: boolean): GameState {
+  for (const [w, c] of Object.entries(s.charge)) {
+    if (c < 1 || s.phase !== 'wave') continue;
+    const boss = s.enemies.some((e) => ctx.enemies.get(e.def)!.boss);
+    if (always || boss || s.enemies.length >= 6) s = castIdiom(ctx, s, w);
+  }
+  return s;
+}
+
 function bestCell(cells: Cell[], score: (c: Cell) => number): Cell | null {
   let best: Cell | null = null;
   let bs = -Infinity;
@@ -112,7 +172,11 @@ function mergeBoard(ctx: Ctx, s: GameState): GameState {
   for (const a of s.towers)
     for (const b of s.towers) {
       if (a.id === b.id || !canMerge(a, b)) continue;
-      const [from, to] = coverage(s, a.x, a.y) <= coverage(s, b.x, b.y) ? [a, b] : [b, a];
+      // 成語線上的字不要拿去合成，線會斷
+      const keepA = idiomScore(ctx, s, a.ch, a.x, a.y) > 1;
+      const keepB = idiomScore(ctx, s, b.ch, b.x, b.y) > 1;
+      if (keepA && keepB) continue;
+      const [from, to] = keepA ? [b, a] : keepB ? [a, b] : coverage(s, a.x, a.y) <= coverage(s, b.x, b.y) ? [a, b] : [b, a];
       const n = moveTower(ctx, s, from, to);
       if (n !== s && !n.events.some((e) => e.t === 'invalid')) return mergeBoard(ctx, n);
     }
@@ -131,6 +195,7 @@ function drawAll(ctx: Ctx, s: GameState, keep = 0): GameState {
 
 /** 亂放：抽到就隨便放。 */
 export const randomBot: Bot = (ctx, s, rand) => {
+  s = castReady(ctx, s, true);
   while (canDraw(s) && rand() < 0.8) s = draw(ctx, s);
   s = combineParts(ctx, s);
   for (const c of [...s.hand]) {
@@ -153,6 +218,7 @@ interface SmartOpts {
 
 function smart(opts: SmartOpts): Bot {
   return (ctx, s) => {
+    s = castReady(ctx, s, false);
     s = drawAll(ctx, s);
     s = combineParts(ctx, s);
     s = mergeHand(ctx, s);
@@ -173,13 +239,14 @@ function smart(opts: SmartOpts): Bot {
       }
       const wall = kindOf(ctx, c.v) === 'wall';
       let cell: Cell | null;
-      if (wall && freePath(s).length && (!opts.words || s.towers.filter((t) => t.onPath).length < 2)) {
+      const wantsIdiom = opts.words && freeGrass(s).some((p) => idiomScore(ctx, s, c.v, p.x, p.y) > 1);
+      if (wall && !wantsIdiom && freePath(s).length && (!opts.words || s.towers.filter((t) => t.onPath).length < 2)) {
         // 屏障放在旁邊字塔最多的路上
         cell = bestCell(freePath(s), (p) => s.towers.filter((t) => Math.hypot(t.x - p.x, t.y - p.y) <= 1.6).length + pathIndex(s.path, p.x, p.y) * 0.01);
       } else {
         cell = bestCell(freeGrass(s), (p) => {
           let v = coverage(s, p.x, p.y);
-          if (opts.words) v += wordsAt(ctx, s, c.v, p.x, p.y) * 8 + potential(ctx, s, c.v, p.x, p.y) * 0.5;
+          if (opts.words) v += wordsAt(ctx, s, c.v, p.x, p.y) * 8 + potential(ctx, s, c.v, p.x, p.y) * 0.5 + idiomScore(ctx, s, c.v, p.x, p.y) * 4;
           return v;
         });
       }

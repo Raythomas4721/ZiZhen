@@ -2,6 +2,7 @@
 
 import { pathIndex, positionAt } from './board';
 import type { Ctx } from './ctx';
+import { swapContent } from './idioms';
 import { refresh } from './refresh';
 import { roll } from './rng';
 import { kindOf } from './stats';
@@ -61,6 +62,37 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     if (target) {
       target.inked = TICK_RATE * 2;
       n.events.push({ t: 'ink', x: target.x, y: target.y });
+      boardChanged = true;
+    }
+  }
+
+  // 錯字：把附近一個詞的兩個字對調（紙鎮鎖住的字不會被動）
+  for (const e of n.enemies) {
+    const def = ctx.enemies.get(e.def)!;
+    if (!def.swapper) continue;
+    if (e.inkCool > 0) {
+      e.inkCool--;
+      continue;
+    }
+    e.inkCool = TICK_RATE * (def.boss ? 4 : 6);
+    const p = positionAt(n.path, e.d);
+    const busy = new Set(n.swaps.flatMap((sw) => [sw.a, sw.b]));
+    let best: [Tower, Tower] | null = null;
+    let bestD = def.boss ? 2.6 : 2.2;
+    for (const w of n.words) {
+      const a = n.towers.find((t) => t.x === w.a.x && t.y === w.a.y);
+      const b = n.towers.find((t) => t.x === w.b.x && t.y === w.b.y);
+      if (!a || !b || a.locked || b.locked || a.onPath || b.onPath || busy.has(a.id) || busy.has(b.id)) continue;
+      const dist = Math.hypot((a.x + b.x) / 2 + 0.5 - p.x, (a.y + b.y) / 2 + 0.5 - p.y);
+      if (dist < bestD) {
+        bestD = dist;
+        best = [a, b];
+      }
+    }
+    if (best) {
+      swapContent(best[0], best[1]);
+      n.swaps = [...n.swaps, { a: best[0].id, b: best[1].id, left: TICK_RATE * 5 }];
+      n.events.push({ t: 'swap', a: { x: best[0].x, y: best[0].y }, b: { x: best[1].x, y: best[1].y } });
       boardChanged = true;
     }
   }

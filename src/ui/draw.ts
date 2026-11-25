@@ -23,7 +23,7 @@ export const KIND_NAME: Record<Kind, string> = {
 };
 
 export interface Fx {
-  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken';
+  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken' | 'swap' | 'flash';
   x: number;
   y: number;
   x2?: number;
@@ -118,6 +118,20 @@ export function drawBoard(
     g.lineCap = 'butt';
   }
 
+  // 成語：金色外框把四格框起來
+  for (const idi of s.idioms) {
+    const xs = idi.cells.map((c) => c.x);
+    const ys = idi.cells.map((c) => c.y);
+    const x0 = Math.min(...xs) * cell + 2;
+    const y0 = Math.min(...ys) * cell + 2;
+    const w = (Math.max(...xs) - Math.min(...xs) + 1) * cell - 4;
+    const h = (Math.max(...ys) - Math.min(...ys) + 1) * cell - 4;
+    const full = (s.charge[idi.w] ?? 0) >= 1;
+    g.fillStyle = full ? 'rgba(176,137,28,0.35)' : 'rgba(176,137,28,0.18)';
+    roundRect(g, x0, y0, w, h, cell * 0.18);
+    g.fill();
+  }
+
   // 字塔
   for (const t of s.towers) {
     const def = ctx.chars.get(t.ch);
@@ -153,6 +167,15 @@ export function drawBoard(
       g.fillStyle = '#5d7a3a';
       g.fillRect(px + pad, py + pad, (cell - pad * 2) * f, 4);
     }
+  }
+
+  for (const idi of s.idioms) {
+    const xs = idi.cells.map((c) => c.x);
+    const ys = idi.cells.map((c) => c.y);
+    g.strokeStyle = '#b0891c';
+    g.lineWidth = 3;
+    roundRect(g, Math.min(...xs) * cell + 2, Math.min(...ys) * cell + 2, (Math.max(...xs) - Math.min(...xs) + 1) * cell - 4, (Math.max(...ys) - Math.min(...ys) + 1) * cell - 4, cell * 0.18);
+    g.stroke();
   }
 
   // 墨妖
@@ -207,6 +230,23 @@ export function drawBoard(
       g.moveTo(f.x * cell, f.y * cell);
       g.lineTo(f.x2 * cell, f.y2 * cell);
       g.stroke();
+    } else if (f.kind === 'flash') {
+      g.fillStyle = withAlpha('#b0891c', a * 0.35);
+      g.fillRect(0, 0, W, H);
+    } else if (f.kind === 'swap' && f.x2 !== undefined && f.y2 !== undefined) {
+      g.strokeStyle = withAlpha('#7a3fa0', a);
+      g.lineWidth = 3;
+      g.setLineDash([6, 4]);
+      g.beginPath();
+      g.moveTo(f.x * cell, f.y * cell);
+      g.lineTo(f.x2 * cell, f.y2 * cell);
+      g.stroke();
+      g.setLineDash([]);
+      for (const [px, py] of [[f.x, f.y], [f.x2, f.y2]]) {
+        g.beginPath();
+        g.arc(px * cell, py * cell, cell * (0.35 + age * 0.2), 0, Math.PI * 2);
+        g.stroke();
+      }
     } else if (f.kind === 'kill') {
       g.fillStyle = withAlpha('#1f1a17', a * 0.4);
       g.beginPath();

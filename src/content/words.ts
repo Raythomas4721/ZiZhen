@@ -39,4 +39,17 @@ export const words: WordDef[] = [
   { w: '明火', effect: { dmg: 0.5, burn: 0.3 }, note: '一把明火，燒得旺。' },
   { w: '山月', effect: { range: 0.5 }, note: '月亮從山後升起。' },
   { w: '月明', effect: { crit: 0.15, range: 0.3 }, note: '月一明，墨妖就無處可躲。' },
+  // 第四章：家書
+  { w: '火海', effect: { dmg: 0.5, splash: 0.4 }, note: '一片火海，誰也過不去。' },
+  { w: '海水', effect: { slow: 0.3, range: 0.3 }, note: '海水又鹹又重，墨妖泡了就走不動。' },
+  { w: '山海', effect: { block: 0.6, range: 0.4 }, note: '翻山越海寄來的信。' },
+  { w: '海口', effect: { range: 0.5 }, note: '海口寬，看得遠。' },
+  { w: '清風', effect: { rate: 0.4 }, note: '清風徐來，出手變輕快。' },
+  { w: '風雨', effect: { slow: 0.25, rate: 0.25 }, note: '風雨交加，墨妖寸步難行。' },
+  { w: '風口', effect: { rate: 0.3, range: 0.3 }, note: '站在風口上，什麼都吹得到。' },
+  { w: '山風', effect: { range: 0.4, rate: 0.2 }, note: '山風把話帶得很遠。' },
+  { w: '雨水', effect: { slow: 0.35 }, note: '雨水積成一灘，墨妖陷在裡面。' },
+  { w: '千山', effect: { range: 0.4, dmg: 0.3 }, note: '一眼望過千山。' },
+  { w: '萬水', effect: { slow: 0.25, rate: 0.2 }, note: '萬條水路，條條都繞遠。' },
+  { w: '千萬', effect: { dmg: 0.6 }, note: '千萬小心：一出手就是重擊。' },
 ];

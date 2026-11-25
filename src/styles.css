@@ -45,7 +45,7 @@ button.ghost { background: transparent; border-color: transparent; padding: 0.3r
 .book.locked { opacity: 0.45; }
 
 /* 遊戲畫面 */
-.game { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.4rem 0.5rem 1rem; user-select: none; -webkit-user-select: none; touch-action: none; }
+.game { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.4rem 0.5rem 1rem; user-select: none; -webkit-user-select: none; }
 .hud { width: 100%; max-width: 448px; display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; font-size: 0.95rem; }
 .hud-title { font-weight: 700; }
 .hud-stats { display: flex; gap: 0.6rem; }
@@ -69,9 +69,9 @@ button.ghost { background: transparent; border-color: transparent; padding: 0.3r
 /* 手牌 */
 .hand-row { width: 100%; max-width: 448px; display: flex; gap: 0.4rem; align-items: stretch; }
 .hand { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.35rem; }
-.slot { aspect-ratio: 3 / 4; border: 1.5px dashed rgba(91, 81, 74, 0.35); border-radius: 8px; }
+.slot { height: 4.4rem; border: 1.5px dashed rgba(91, 81, 74, 0.35); border-radius: 8px; }
 .card {
-  aspect-ratio: 3 / 4; border-radius: 8px; background: var(--paper-3); border: 2px solid var(--ink-soft);
+  height: 4.4rem; border-radius: 8px; background: var(--paper-3); border: 2px solid var(--ink-soft);
   display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;
   touch-action: none; cursor: grab; box-shadow: 0 1px 3px rgba(60, 40, 20, 0.15);
 }
@@ -121,3 +121,21 @@ button.ghost { background: transparent; border-color: transparent; padding: 0.3r
 .word-item small { display: block; color: var(--ink-soft); font-size: 0.75rem; }
 .word-item.unknown { color: var(--ink-soft); }
 .muted { color: var(--ink-soft); font-size: 0.85rem; }
+
+/* 成語 */
+.idiom-bar { width: 100%; max-width: 448px; display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center; }
+.idiom {
+  display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; padding: 0.3rem 0.5rem; min-width: 6.2rem;
+  border-color: rgba(176, 137, 28, 0.6); background: var(--paper-3);
+}
+.idiom:disabled { opacity: 1; cursor: default; }
+.idiom-text { letter-spacing: 0.15em; font-weight: 700; color: var(--ink-soft); }
+.idiom-text .have { color: var(--ink); }
+.idiom.live .idiom-text { color: var(--gold); }
+.idiom-meter { height: 5px; border-radius: 3px; background: rgba(176, 137, 28, 0.18); overflow: hidden; }
+.idiom-meter span { display: block; height: 100%; background: var(--gold); transition: width 0.2s linear; }
+.idiom.ready { background: var(--gold); border-color: var(--gold); animation: pulse 1s ease-in-out infinite; }
+.idiom.ready .idiom-text, .idiom.ready .idiom-text .have { color: var(--paper-3); }
+.idiom.ready .idiom-meter { background: rgba(255, 250, 240, 0.4); }
+.idiom.ready .idiom-meter span { background: var(--paper-3); }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }

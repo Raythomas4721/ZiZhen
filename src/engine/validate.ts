@@ -2,11 +2,13 @@
 
 import { buildableCount, expandPath, inBounds } from './board';
 import { boxCandidates, boxReport, recommendBox } from './box';
-import { unlockedChars, wordsWithin, type Ctx } from './ctx';
+import { idiomsWithin, unlockedChars, wordsWithin, type Ctx } from './ctx';
 import { partnersOf } from './words';
 
 export const MIN_BUILDABLE = 30;
 export const MIN_WORDS = 3;
+/** 第幾章開始，書箱裡一定要湊得出成語。 */
+export const IDIOM_FROM = 4;
 
 const KINDS = new Set(['fire', 'water', 'wall', 'metal', 'support', 'light']);
 const TOOLS = new Set(['shovel', 'brush', 'weight']);
@@ -35,6 +37,18 @@ export function validateContent(ctx: Ctx): string[] {
     for (const x of cs) if (!ctx.chars.has(x)) err('詞', `「${w.w}」用到沒定義的字「${x}」`);
     if (cs[0] === cs[1]) err('詞', `「${w.w}」兩個字一樣`);
     if (Object.keys(w.effect).length === 0) err('詞', `「${w.w}」沒有效果`);
+  }
+
+  // 成語
+  const seenI = new Set<string>();
+  for (const w of c.idioms) {
+    const cs = [...w.w];
+    if (cs.length !== 4) err('成語', `「${w.w}」不是四個字`);
+    if (seenI.has(w.w)) err('成語', `「${w.w}」重複`);
+    seenI.add(w.w);
+    for (const x of cs) if (!ctx.chars.has(x)) err('成語', `「${w.w}」用到沒定義的字「${x}」`);
+    if (new Set(cs).size !== 4) err('成語', `「${w.w}」有重複的字`);
+    if (w.charge <= 0) err('成語', `「${w.w}」集氣時間不對`);
   }
 
   // 部件配方
@@ -89,6 +103,10 @@ export function validateContent(ctx: Ctx): string[] {
     if (rep.weak.length) err(where, `推薦書箱裡的「${rep.weak.join('、')}」湊不到 2 個詞`);
     const makeable = wordsWithin(ctx, cands).length;
     if (makeable < MIN_WORDS) err(where, `只湊得出 ${makeable} 個詞（至少 ${MIN_WORDS}）`);
+    if (ch.index >= IDIOM_FROM) {
+      if (idiomsWithin(ctx, cands).length === 0) err(where, '湊不出任何成語');
+      if (rep.idioms === 0) err(where, '推薦書箱裡湊不出成語');
+    }
 
     // 部件
     for (const p of ch.parts) {
