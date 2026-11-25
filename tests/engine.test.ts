@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ctx } from '../src/content';
-import { draw, drawCost, place } from '../src/engine/actions';
+import { combine, draw, drawCost, moveTower, place } from '../src/engine/actions';
 import { expandPath, positionAt } from '../src/engine/board';
 import { createGame, startWave, step } from '../src/engine/game';
 import type { GameState } from '../src/engine/types';
@@ -106,5 +106,54 @@ describe('波次', () => {
     for (let i = 0; i < 100; i++) n = step(ctx, n);
     expect(s.enemies).toEqual([]);
     expect(n.enemies.length).toBeGreaterThan(0);
+  });
+});
+
+describe('合成', () => {
+  it('卡放到同字同級的字上會升級，屏障血量補滿', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 9 });
+    let uid: number;
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 1, 0);
+    s = { ...s, towers: s.towers.map((t) => ({ ...t, block: 1 })) };
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 1, 0);
+    expect(s.towers).toHaveLength(1);
+    expect(s.towers[0].lv).toBe(2);
+    expect(s.towers[0].block).toBe(s.towers[0].stats.blockMax);
+    expect(s.events.some((e) => e.t === 'merge')).toBe(true);
+  });
+
+  it('等級不同不能合成', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 9 });
+    let a: number;
+    let b: number;
+    [s, a] = withCard(s, '火', 2);
+    [s, b] = withCard(s, '火', 1);
+    const n = combine(ctx, s, a, b);
+    expect(n.hand).toHaveLength(2);
+    expect(n.events[0]).toEqual({ t: 'invalid', reason: '等級不同，不能合成' });
+  });
+
+  it('手上兩張同字同級的卡可以疊成一張', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 9 });
+    let a: number;
+    let b: number;
+    [s, a] = withCard(s, '水');
+    [s, b] = withCard(s, '水');
+    s = combine(ctx, s, a, b);
+    expect(s.hand).toEqual([{ uid: b, kind: 'char', v: '水', lv: 2 }]);
+  });
+
+  it('盤面上的字拖到同字同級的字上會合成，原本那格空出來', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 9 });
+    let uid: number;
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 0, 1);
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 2, 1);
+    s = moveTower(ctx, s, { x: 0, y: 1 }, { x: 2, y: 1 });
+    expect(s.towers).toHaveLength(1);
+    expect(s.towers[0]).toMatchObject({ x: 2, y: 1, lv: 2 });
   });
 });

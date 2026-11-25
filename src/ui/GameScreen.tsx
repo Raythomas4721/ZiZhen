@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { canDraw, draw, drawCost, place, sell } from '../engine/actions';
+import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, sell, towerAt } from '../engine/actions';
 import { chapterOf, type Ctx } from '../engine/ctx';
 import { createGame, startWave } from '../engine/game';
-import { COLS, HAND_SIZE, PAGE_HP, type Card, type GameEvent } from '../engine/types';
+import { COLS, HAND_SIZE, PAGE_HP, type Card, type Cell, type GameEvent } from '../engine/types';
 import { BoardCanvas, type BoardHandle } from './BoardCanvas';
 import { CardView, cardGlyph } from './CardView';
 import { useGame } from './useGame';
@@ -14,7 +14,7 @@ interface Props {
 }
 
 function useCellSize() {
-  const calc = () => Math.floor(Math.min(window.innerWidth - 12, 448, (window.innerHeight - 230) * (7 / 9)) / COLS);
+  const calc = () => Math.floor(Math.min(window.innerWidth - 12, 448, (window.innerHeight - 250) * (7 / 9)) / COLS);
   const [cell, setCell] = useState(calc);
   useEffect(() => {
     const on = () => setCell(calc());
@@ -24,13 +24,20 @@ function useCellSize() {
   return cell;
 }
 
+/** 拖的東西：手上的卡，或盤面上的字。 */
+type DragSrc = { t: 'card'; card: Card } | { t: 'tower'; from: Cell; ch: string; lv: number };
+
 interface Drag {
-  card: Card;
+  src: DragSrc;
   x: number;
   y: number;
   startX: number;
   startY: number;
   moved: boolean;
+}
+
+function srcGlyph(src: DragSrc): string {
+  return src.t === 'card' ? cardGlyph(src.card) : src.ch;
 }
 
 export function GameScreen({ ctx, chapter, onExit }: Props) {
@@ -52,19 +59,28 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
   const dragRef = useRef<Drag | null>(null);
   dragRef.current = drag;
 
-  // 選到的卡不見了就取消選取
   useEffect(() => {
     if (selected !== null && !s.hand.some((h) => h.uid === selected)) setSelected(null);
   }, [s.hand, selected]);
 
-  const dropAt = (card: Card, clientX: number, clientY: number) => {
+  const dropAt = (src: DragSrc, clientX: number, clientY: number) => {
     const c = boardRef.current?.cellAt(clientX, clientY);
+    if (src.t === 'tower') {
+      if (c) game.act((st) => moveTower(ctx, st, src.from, c));
+      return;
+    }
     if (c) {
-      game.act((st) => place(ctx, st, card.uid, c.x, c.y));
+      game.act((st) => place(ctx, st, src.card.uid, c.x, c.y));
       return;
     }
     const el = document.elementFromPoint(clientX, clientY);
-    if (el?.closest('.sell')) game.act((st) => sell(st, card.uid));
+    const target = el?.closest<HTMLElement>('[data-uid]');
+    if (target) {
+      const uid = Number(target.dataset.uid);
+      game.act((st) => combine(ctx, st, src.card.uid, uid));
+      return;
+    }
+    if (el?.closest('.sell')) game.act((st) => sell(st, src.card.uid));
   };
 
   useEffect(() => {
@@ -82,10 +98,15 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
       boardRef.current?.setHover(null);
       if (!d) return;
       if (d.moved) {
-        dropAt(d.card, e.clientX, e.clientY);
+        dropAt(d.src, e.clientX, e.clientY);
         setSelected(null);
-      } else {
-        setSelected((cur) => (cur === d.card.uid ? null : d.card.uid));
+      } else if (d.src.t === 'card') {
+        const uid = d.src.card.uid;
+        // 已經選了一張卡，再點另一張卡就是把兩張疊起來
+        if (selected !== null && selected !== uid) {
+          game.act((st) => combine(ctx, st, selected, uid));
+          setSelected(null);
+        } else setSelected((cur) => (cur === uid ? null : uid));
       }
     };
     window.addEventListener('pointermove', move);
@@ -105,7 +126,20 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
     if (selected !== null) {
       game.act((st) => place(ctx, st, selected, c.x, c.y));
       setSelected(null);
+      return;
     }
+    const t = towerAt(game.stateRef.current, c.x, c.y);
+    if (t) {
+      e.preventDefault();
+      setDrag({ src: { t: 'tower', from: c, ch: t.ch, lv: t.lv }, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false });
+    }
+  };
+
+  const dragging = drag?.moved ? drag.src : null;
+  const mergeable = (c: Card): boolean => {
+    const src = dragging ?? (selected !== null ? { t: 'card' as const, card: s.hand.find((h) => h.uid === selected)! } : null);
+    if (!src || src.t !== 'card' || !src.card || src.card.uid === c.uid) return false;
+    return src.card.kind === 'char' && c.kind === 'char' && canMerge({ ch: src.card.v, lv: src.card.lv }, { ch: c.v, lv: c.lv });
   };
 
   const tip = s.phase === 'prep' ? ch.tips?.[s.wave] : undefined;
@@ -140,10 +174,14 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
                 key={c.uid}
                 ctx={ctx}
                 card={c}
-                className={`${selected === c.uid ? 'drop' : ''} ${drag?.card.uid === c.uid && drag.moved ? 'dragging' : ''}`}
+                className={[
+                  selected === c.uid ? 'drop' : '',
+                  mergeable(c) ? 'drop' : '',
+                  dragging?.t === 'card' && dragging.card.uid === c.uid ? 'dragging' : '',
+                ].join(' ')}
                 onPointerDown={(e) => {
                   e.preventDefault();
-                  setDrag({ card: c, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false });
+                  setDrag({ src: { t: 'card', card: c }, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false });
                 }}
               />
             ) : (
@@ -156,7 +194,7 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
             抽字
             <small>{cost} 文</small>
           </button>
-          <div className={`sell ${drag?.moved ? 'drop' : ''}`}>拖來賣</div>
+          <div className={`sell ${dragging?.t === 'card' ? 'drop' : ''}`}>拖來賣</div>
         </div>
       </div>
 
@@ -175,9 +213,9 @@ export function GameScreen({ ctx, chapter, onExit }: Props) {
         {s.phase === 'done' && <div className="done">這本書守完了。</div>}
       </div>
 
-      {drag?.moved && (
-        <div className="ghost-card" style={{ left: drag.x, top: drag.y }}>
-          {cardGlyph(drag.card)}
+      {dragging && (
+        <div className="ghost-card" style={{ left: drag!.x, top: drag!.y }}>
+          {srcGlyph(dragging)}
         </div>
       )}
       {toast && (
