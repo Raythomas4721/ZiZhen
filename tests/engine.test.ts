@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ctx } from '../src/content';
+import { draw, drawCost, place } from '../src/engine/actions';
 import { expandPath, positionAt } from '../src/engine/board';
 import { createGame, startWave, step } from '../src/engine/game';
 import type { GameState } from '../src/engine/types';
@@ -32,6 +33,52 @@ describe('路徑', () => {
       { x: 2, y: 0 },
     ]);
     expect(positionAt(p, 0.5)).toEqual({ x: 1, y: 0.5 });
+  });
+});
+
+function withCard(s: GameState, v: string, lv = 1): [GameState, number] {
+  const uid = s.nextId;
+  return [{ ...s, nextId: s.nextId + 1, hand: [...s.hand, { uid, kind: 'char', v, lv }] }, uid];
+}
+
+describe('抽字與放字', () => {
+  it('抽字越抽越貴，手牌滿了就不能抽', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 5 });
+    s = { ...s, coins: 999 };
+    const costs: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      costs.push(drawCost(s));
+      s = draw(ctx, s);
+    }
+    expect(costs.slice(0, 3)).toEqual([8, 11, 14]);
+    expect(s.hand.length).toBe(5);
+    expect(s.events[0]).toEqual({ t: 'invalid', reason: '手牌滿了' });
+  });
+
+  it('只有屏障字能放在路上', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 5 });
+    let uid: number;
+    [s, uid] = withCard(s, '火');
+    const bad = place(ctx, s, uid, 1, 0);
+    expect(bad.towers.length).toBe(0);
+    expect(bad.events[0].t).toBe('invalid');
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 1, 0);
+    expect(s.towers[0].onPath).toBe(true);
+    expect(s.towers[0].block).toBeGreaterThan(0);
+  });
+
+  it('放了字塔，第一波能全部打倒並拿到文錢', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 7 });
+    let uid: number;
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 0, 1);
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 2, 1);
+    const coins = s.coins;
+    const n = runWave(s);
+    expect(n.results).toEqual(['held']);
+    expect(n.coins).toBeGreaterThan(coins + 15);
   });
 });
 
