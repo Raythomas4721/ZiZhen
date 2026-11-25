@@ -4,7 +4,8 @@ import { chapterOf } from './engine/ctx';
 import { BoxPicker } from './ui/BoxPicker';
 import { Dictionary } from './ui/Dictionary';
 import { GameScreen } from './ui/GameScreen';
-import { loadSave, recordBox, recordFound, recordResult, type SaveData } from './ui/save';
+import { loadSave, recordBox, recordFound, recordResult, recordTutorial, type SaveData } from './ui/save';
+import { Help } from './ui/Help';
 import { Shelf } from './ui/Shelf';
 import { unlockAudio } from './ui/sound';
 
@@ -17,6 +18,7 @@ type Screen =
   | { t: 'title' }
   | { t: 'shelf' }
   | { t: 'dict' }
+  | { t: 'help' }
   | { t: 'box'; chapter: string }
   | { t: 'game'; chapter: string; box?: string[]; key: number };
 
@@ -49,6 +51,8 @@ export function App() {
         onFound={onFound}
         onFinish={onFinish(screen.chapter)}
         onRetry={() => play(screen.chapter, screen.box)}
+        tutorial={screen.chapter === 'ch01' && !save.tutorialDone}
+        onTutorialDone={() => setSave((d) => recordTutorial(d, true))}
       />
     );
   }
@@ -67,6 +71,17 @@ export function App() {
       />
     );
   }
+  if (screen.t === 'help') {
+    return (
+      <Help
+        onBack={() => setScreen({ t: 'shelf' })}
+        onReplayTutorial={() => {
+          setSave((d) => recordTutorial(d, false));
+          play('ch01');
+        }}
+      />
+    );
+  }
   if (screen.t === 'dict') {
     return <Dictionary ctx={ctx} save={save} onBack={() => setScreen({ t: 'shelf' })} />;
   }
@@ -78,6 +93,7 @@ export function App() {
         onBack={() => setScreen({ t: 'title' })}
         onPlay={open}
         onDictionary={() => setScreen({ t: 'dict' })}
+        onHelp={() => setScreen({ t: 'help' })}
       />
     );
   }

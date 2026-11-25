@@ -7,6 +7,7 @@ interface Props {
   onBack: () => void;
   onPlay: (chapter: string) => void;
   onDictionary?: () => void;
+  onHelp?: () => void;
 }
 
 export function isUnlocked(ctx: Ctx, save: SaveData, chapterId: string): boolean {
@@ -16,13 +17,16 @@ export function isUnlocked(ctx: Ctx, save: SaveData, chapterId: string): boolean
   return !!prev && (save.stars[prev.id] ?? 0) > 0;
 }
 
-export function Shelf({ ctx, save, onBack, onPlay, onDictionary }: Props) {
+export function Shelf({ ctx, save, onBack, onPlay, onDictionary, onHelp }: Props) {
   return (
     <div className="shelf">
       <button className="ghost" onClick={onBack}>
         ← 封面
       </button>
-      <h2>藏書閣</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2>藏書閣</h2>
+        {onHelp && <button onClick={onHelp}>怎麼玩</button>}
+      </div>
       {ctx.content.chapters.map((ch) => {
         const open = isUnlocked(ctx, save, ch.id);
         const stars = save.stars[ch.id] ?? 0;

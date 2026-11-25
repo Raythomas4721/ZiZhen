@@ -9,9 +9,11 @@ export interface SaveData {
   boxes: Record<string, string[]>;
   /** 終章找回的字（之後挑書箱時可以選）。 */
   secrets: string[];
+  /** 看完（或跳過）第一章的新手教學了沒。 */
+  tutorialDone: boolean;
 }
 
-const empty = (): SaveData => ({ v: 1, stars: {}, found: [], boxes: {}, secrets: [] });
+const empty = (): SaveData => ({ v: 1, stars: {}, found: [], boxes: {}, secrets: [], tutorialDone: false });
 
 export function loadSave(): SaveData {
   try {
@@ -19,7 +21,7 @@ export function loadSave(): SaveData {
     if (!raw) return empty();
     const d = JSON.parse(raw) as Partial<SaveData>;
     if (d.v !== 1) return empty();
-    return { v: 1, stars: d.stars ?? {}, found: d.found ?? [], boxes: d.boxes ?? {}, secrets: d.secrets ?? [] };
+    return { v: 1, stars: d.stars ?? {}, found: d.found ?? [], boxes: d.boxes ?? {}, secrets: d.secrets ?? [], tutorialDone: d.tutorialDone ?? false };
   } catch {
     return empty();
   }
@@ -54,6 +56,12 @@ export function recordFound(d: SaveData, found: string[]): SaveData {
 
 export function recordBox(d: SaveData, chapter: string, box: string[]): SaveData {
   const next = { ...d, boxes: { ...d.boxes, [chapter]: box } };
+  writeSave(next);
+  return next;
+}
+
+export function recordTutorial(d: SaveData, done: boolean): SaveData {
+  const next = { ...d, tutorialDone: done };
   writeSave(next);
   return next;
 }

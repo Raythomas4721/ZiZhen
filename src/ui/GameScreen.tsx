@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { canDraw, canMerge, combine, draw, drawCost, moveTower, place, placeCheck, recipeFor, sell, towerAt } from '../engine/actions';
+import { canDraw, canMerge, combine, draw, drawCost, grant, moveTower, place, placeCheck, recipeFor, sell, towerAt } from '../engine/actions';
 import { baseStats } from '../engine/stats';
 import { soundForEvents, setSoundSettings } from './sound';
 import { loadSettings, saveSettings, type Settings } from './settings';
@@ -14,6 +14,7 @@ import { CardView, cardGlyph, TOOL_INFO } from './CardView';
 import { IdiomBar, reachableIdioms } from './IdiomBar';
 import { useGame } from './useGame';
 import { castIdiom } from '../engine/idioms';
+import { WORD_TUTORIAL } from './tutorial';
 
 interface Props {
   ctx: Ctx;
@@ -25,6 +26,9 @@ interface Props {
   onFound: (words: string[]) => void;
   onFinish: (stars: number, found: string[], secret?: string) => void;
   onRetry: () => void;
+  /** 要不要跑新手教學（第一章、還沒看過時）。 */
+  tutorial?: boolean;
+  onTutorialDone?: () => void;
 }
 
 /** 格子大小：寬度和高度都要塞得下（reserve 是盤面以外的介面高度）。 */
@@ -57,7 +61,7 @@ function srcGlyph(src: DragSrc): string {
   return src.t === 'card' ? cardGlyph(src.card) : src.ch;
 }
 
-export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish, onRetry }: Props) {
+export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish, onRetry, tutorial, onTutorialDone }: Props) {
   const ch = chapterOf(ctx, chapter);
   const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
   const [wordNote, setWordNote] = useState<{ w: string; note: string; fresh: boolean } | null>(null);
@@ -212,6 +216,39 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
     return src.card.kind === 'char' && c.kind === 'char' && canMerge({ ch: src.card.v, lv: src.card.lv }, { ch: c.v, lv: c.lv });
   };
 
+  // ---- 新手教學 ----
+  const [tutStep, setTutStep] = useState<number>(tutorial ? 0 : -1);
+  const givenRef = useRef(new Set<number>());
+  const step = tutStep >= 0 ? WORD_TUTORIAL[tutStep] : undefined;
+  const endTutorial = () => {
+    setTutStep(-1);
+    boardRef.current?.setGuide([]);
+    onTutorialDone?.();
+  };
+  const nextStep = () => {
+    if (tutStep + 1 >= WORD_TUTORIAL.length) endTutorial();
+    else setTutStep(tutStep + 1);
+  };
+  // 進到新的一步：送卡
+  useEffect(() => {
+    if (!step || givenRef.current.has(tutStep)) return;
+    givenRef.current.add(tutStep);
+    if (step.give) game.act((st) => grant(st, step.give!));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutStep]);
+  // 每次盤面變了：更新亮起來的格子、檢查做到了沒
+  useEffect(() => {
+    if (!step) return;
+    boardRef.current?.setGuide(step.guide ? step.guide(s) : []);
+    if (step.done && givenRef.current.has(tutStep) && step.done(s)) nextStep();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s, tutStep]);
+  // 教學中途就按了開始：教學結束
+  useEffect(() => {
+    if (step && s.phase !== 'prep') endTutorial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.phase]);
+
   // 守完一本書：記錄一次
   const finishedRef = useRef(false);
   useEffect(() => {
@@ -254,7 +291,26 @@ export function GameScreen({ ctx, chapter, box, known, onExit, onFound, onFinish
         </div>
       </header>
 
-      {tip && <div className="tip">{tip}</div>}
+      {step ? (
+        <div className="coach">
+          <div className="coach-step">
+            教學 {tutStep + 1} / {WORD_TUTORIAL.length}
+          </div>
+          <p>{step.text}</p>
+          <div className="coach-actions">
+            <button className="ghost" onClick={endTutorial}>
+              跳過教學
+            </button>
+            {step.next && (
+              <button className="primary" onClick={nextStep}>
+                {step.next}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        tip && <div className="tip">{tip}</div>
+      )}
       {selectedCard && selectedCard.kind !== 'char' && (
         <div className="tip">
           {selectedCard.kind === 'tool' ? (

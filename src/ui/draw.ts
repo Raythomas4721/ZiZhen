@@ -2,7 +2,7 @@
 
 import { enemyPos } from '../engine/game';
 import type { Ctx } from '../engine/ctx';
-import { COLS, ROWS, type GameState, type Kind } from '../engine/types';
+import { COLS, ROWS, type Cell, type GameState, type Kind } from '../engine/types';
 
 export const KIND_COLOR: Record<Kind, string> = {
   fire: '#c4472f',
@@ -52,6 +52,7 @@ export function drawBoard(
   fx: Fx[],
   now: number,
   hover: Hover | null,
+  guide: Cell[] = [],
 ) {
   const W = COLS * cell;
   const H = ROWS * cell;
@@ -108,6 +109,18 @@ export function drawBoard(
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('頁', (last.x + 0.5) * cell, (last.y + 0.53) * cell);
+
+  // 教學：建議放字的格子
+  if (guide.length) {
+    const pulse = 0.5 + 0.5 * Math.sin(now / 220);
+    for (const c of guide) {
+      g.fillStyle = `rgba(176,137,28,${0.12 + 0.18 * pulse})`;
+      g.fillRect(c.x * cell + 2, c.y * cell + 2, cell - 4, cell - 4);
+      g.strokeStyle = '#b0891c';
+      g.lineWidth = 2 + pulse * 2;
+      g.strokeRect(c.x * cell + 3, c.y * cell + 3, cell - 6, cell - 6);
+    }
+  }
 
   if (hover) {
     const ok = hover.ok ?? true;

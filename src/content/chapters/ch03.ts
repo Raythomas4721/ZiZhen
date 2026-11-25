@@ -18,8 +18,8 @@ export const ch03: ChapterDef = {
   ],
   waves: [
     { hp: 1.4, groups: [{ enemy: 'dot', count: 8, every: 1.8, delay: 1 }] },
-    { hp: 1.5, groups: [{ enemy: 'dot', count: 8, every: 1.6, delay: 1 }, { enemy: 'tugai', count: 2, every: 5, delay: 6 }] },
-    { hp: 1.6, groups: [{ enemy: 'dot', count: 10, every: 1.4, delay: 1 }, { enemy: 'blob', count: 3, every: 4, delay: 6 }] },
+    { hp: 1.45, groups: [{ enemy: 'dot', count: 8, every: 1.6, delay: 1 }, { enemy: 'tugai', count: 2, every: 5, delay: 6 }] },
+    { hp: 1.5, groups: [{ enemy: 'dot', count: 10, every: 1.4, delay: 1 }, { enemy: 'blob', count: 2, every: 5, delay: 6 }] },
     { hp: 1.95, groups: [{ enemy: 'tugai', count: 4, every: 3, delay: 1 }, { enemy: 'feibai', count: 6, every: 1.2, delay: 4 }] },
     { hp: 1.7, boss: true, groups: [{ enemy: 'dot', count: 8, every: 1.4, delay: 1 }, { enemy: 'bigbrush', count: 1, every: 1, delay: 8 }] },
     { hp: 2.15, groups: [{ enemy: 'dot', count: 16, every: 0.9, delay: 1 }, { enemy: 'tugai', count: 3, every: 4, delay: 4 }, { enemy: 'blob', count: 3, every: 4, delay: 8 }] },

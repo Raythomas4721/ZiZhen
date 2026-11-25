@@ -27,11 +27,14 @@ interface PoolItem {
   w: number;
 }
 
+/** 工具卡的抽中權重（一個書箱字是 1）。鏟子是唯一能挪字的方法，所以比較容易抽到。 */
+export const TOOL_WEIGHT: Record<ToolId, number> = { shovel: 0.4, brush: 0.2, weight: 0.2 };
+
 export function drawPool(ctx: Ctx, s: GameState): PoolItem[] {
   const ch = chapterOf(ctx, s.chapter);
   const items: PoolItem[] = s.box.map((v) => ({ kind: 'char', v, w: 1 }));
   for (const p of ch.parts) items.push({ kind: 'part', v: p, w: 0.35 });
-  for (const t of ch.tools) items.push({ kind: 'tool', v: t, w: 0.2 });
+  for (const t of ch.tools) items.push({ kind: 'tool', v: t, w: TOOL_WEIGHT[t] });
   return items;
 }
 
@@ -237,5 +240,14 @@ export function useTool(ctx: Ctx, s: GameState, uid: number, x: number, y: numbe
     t.ch = best;
   }
   refresh(ctx, n);
+  return n;
+}
+
+/** 直接給卡（教學用）。不扣文錢，也不受手牌上限限制。 */
+export function grant(s: GameState, cards: { kind: CardKind; v: string; lv?: number }[]): GameState {
+  if (!cards.length) return s;
+  const n = edit(s);
+  for (const c of cards) n.hand.push({ uid: n.nextId++, kind: c.kind, v: c.v, lv: c.lv ?? 1 });
+  n.events.push({ t: 'drew' });
   return n;
 }
