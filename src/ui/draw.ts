@@ -1,7 +1,7 @@
 // 用 Canvas 畫戰鬥畫面。只讀狀態，不改狀態。
 
-import { enemyPos } from '../engine/game';
 import type { Ctx } from '../engine/ctx';
+import { drawBossBar, drawEnemy, drawStain } from './drawEnemy';
 import { COLS, ROWS, type Cell, type GameState, type Kind } from '../engine/types';
 
 export const KIND_COLOR: Record<Kind, string> = {
@@ -31,7 +31,11 @@ export interface Hover {
 }
 
 export interface Fx {
-  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken' | 'swap' | 'flash' | 'text' | 'pop' | 'shake';
+  kind: 'hit' | 'kill' | 'merge' | 'ink' | 'broken' | 'swap' | 'flash' | 'text' | 'pop' | 'shake' | 'ehit' | 'stain';
+  /** ehit：被打中的墨妖 id。 */
+  id?: number;
+  /** stain：墨妖的大小。 */
+  size?: number;
   x: number;
   y: number;
   x2?: number;
@@ -139,6 +143,13 @@ export function drawBoard(
     }
   }
 
+  // 打倒墨妖後的墨漬（畫在紙上，字塔底下）
+  for (const f of fx) {
+    if (f.kind !== 'stain') continue;
+    const age = (now - f.born) / f.life;
+    if (age >= 0 && age < 1) drawStain(g, f.x, f.y, f.size ?? 0.35, cell, age, Math.round(f.born));
+  }
+
   // 詞的連線（畫在字塔底下）
   for (const w of s.words) {
     g.strokeStyle = 'rgba(179,58,43,0.45)';
@@ -212,54 +223,9 @@ export function drawBoard(
   }
 
   // 墨妖
-  for (const e of s.enemies) {
-    const def = ctx.enemies.get(e.def)!;
-    const p = enemyPos(s, e);
-    const r = def.size * cell * 0.5;
-    const cx = p.x * cell;
-    const cy = p.y * cell;
-    g.fillStyle = def.flying ? 'rgba(40,34,30,0.5)' : '#1f1a17';
-    if (e.frozen > 0) g.fillStyle = '#4b6d8a';
-    // 隱墨：沒被照到時只剩淡淡的影子
-    if (def.hidden) g.globalAlpha = e.seen ? 0.85 : 0.18;
-    blob(g, cx, cy, r, e.id);
-    g.fill();
-    if (def.flying) {
-      g.strokeStyle = 'rgba(40,34,30,0.35)';
-      g.lineWidth = r * 0.3;
-      g.beginPath();
-      g.moveTo(cx - r * 1.8, cy);
-      g.lineTo(cx - r, cy);
-      g.stroke();
-    }
-    if (def.inker) {
-      g.fillStyle = '#b33a2b';
-      g.beginPath();
-      g.arc(cx + r * 0.4, cy - r * 0.4, r * 0.28, 0, Math.PI * 2);
-      g.fill();
-    }
-    if (e.burnLeft > 0) {
-      g.fillStyle = 'rgba(220,90,40,0.75)';
-      g.beginPath();
-      g.arc(cx, cy - r, r * 0.25, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.globalAlpha = 1;
-    if (def.hidden && e.seen) {
-      g.strokeStyle = 'rgba(176,137,28,0.8)';
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.arc(cx, cy, r * 1.25, 0, Math.PI * 2);
-      g.stroke();
-    }
-    const f = e.hp / e.maxHp;
-    if (f < 1 && (!def.hidden || e.seen)) {
-      g.fillStyle = 'rgba(0,0,0,0.2)';
-      g.fillRect(cx - r, cy - r - 6, r * 2, 3);
-      g.fillStyle = '#b33a2b';
-      g.fillRect(cx - r, cy - r - 6, r * 2 * f, 3);
-    }
-  }
+  const hitAt = new Map<number, number>();
+  for (const f of fx) if (f.kind === 'ehit' && f.id !== undefined) hitAt.set(f.id, Math.max(hitAt.get(f.id) ?? 0, f.born));
+  for (const e of s.enemies) drawEnemy(g, ctx, s, e, cell, now, hitAt.get(e.id));
 
   // 特效
   for (const f of fx) {
@@ -287,7 +253,7 @@ export function drawBoard(
       g.strokeStyle = withAlpha('#5d7a3a', a);
       g.lineWidth = 2;
       g.strokeRect((f.x - 0.5 + age * -0.1) * cell, (f.y - 0.5 + age * -0.1) * cell, cell * (1 + age * 0.2), cell * (1 + age * 0.2));
-    } else if (f.kind === 'shake') {
+    } else if (f.kind === 'shake' || f.kind === 'ehit' || f.kind === 'stain') {
       // 震動由 BoardCanvas 處理
     } else if (f.kind === 'flash') {
       g.fillStyle = withAlpha('#b0891c', a * 0.35);
@@ -365,6 +331,9 @@ export function drawBoard(
     g.textBaseline = 'middle';
     g.fillText(w.w, mx, my + 1);
   }
+
+  // 頭目名字和血條（最上層）
+  drawBossBar(g, ctx, s, cell, W);
 }
 
 function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -374,21 +343,6 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.arcTo(x + w, y + h, x, y + h, r);
   g.arcTo(x, y + h, x, y, r);
   g.arcTo(x, y, x + w, y, r);
-  g.closePath();
-}
-
-/** 有點不規則的墨點形狀，用 id 決定，畫面才不會抖。 */
-function blob(g: CanvasRenderingContext2D, cx: number, cy: number, r: number, seed: number) {
-  const n = 9;
-  g.beginPath();
-  for (let i = 0; i <= n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    const k = 1 + 0.12 * Math.sin(seed * 1.7 + i * 2.3);
-    const x = cx + Math.cos(a) * r * k;
-    const y = cy + Math.sin(a) * r * k;
-    if (i === 0) g.moveTo(x, y);
-    else g.lineTo(x, y);
-  }
   g.closePath();
 }
 

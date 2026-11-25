@@ -264,8 +264,8 @@ export interface ActiveWord {
 }
 
 export type GameEvent =
-  | { t: 'hit'; from: Cell; to: { x: number; y: number }; kind: Kind; crit: boolean }
-  | { t: 'kill'; x: number; y: number; reward: number }
+  | { t: 'hit'; from: Cell; to: { x: number; y: number }; kind: Kind; crit: boolean; id: number }
+  | { t: 'kill'; x: number; y: number; reward: number; size: number }
   | { t: 'leak'; dmg: number }
   | { t: 'word'; w: string; fresh: boolean }
   | { t: 'merge'; x: number; y: number; lv: number }

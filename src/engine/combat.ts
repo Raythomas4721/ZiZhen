@@ -127,7 +127,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     const dmg = st.dmg * (crit ? 2 : 1);
     target.hp -= dmg;
     const tp = positions.get(target.id)!;
-    n.events.push({ t: 'hit', from: { x: t.x, y: t.y }, to: tp, kind: kindOf(ctx, t.ch), crit });
+    n.events.push({ t: 'hit', from: { x: t.x, y: t.y }, to: tp, kind: kindOf(ctx, t.ch), crit, id: target.id });
     if (st.slow > 0) applySlow(target, st.slow, st.slowTicks);
     if (st.burn > 0) applyBurn(target, dmg * st.burn);
     if (st.freeze > 0 && roll(n) < st.freeze) {
@@ -156,7 +156,7 @@ export function runCombat(ctx: Ctx, n: GameState): void {
     const p = positions.get(e.id) ?? positionAt(n.path, e.d);
     becomeCard(ctx, n, def);
     n.coins += def.reward;
-    n.events.push({ t: 'kill', x: p.x, y: p.y, reward: def.reward });
+    n.events.push({ t: 'kill', x: p.x, y: p.y, reward: def.reward, size: def.size });
   }
   n.enemies = alive;
 

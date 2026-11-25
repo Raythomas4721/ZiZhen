@@ -49,7 +49,9 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
             born: now,
             life: 160,
           });
+          fxRef.current.push({ kind: 'ehit', x: 0, y: 0, id: ev.id, born: now, life: 120 });
         } else if (ev.t === 'kill') {
+          fxRef.current.push({ kind: 'stain', x: ev.x, y: ev.y, size: ev.size, born: now, life: 4000 });
           fxRef.current.push({ kind: 'kill', x: ev.x, y: ev.y, text: `+${ev.reward}`, born: now, life: 600 });
         } else if (ev.t === 'merge') {
           fxRef.current.push({ kind: 'merge', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
@@ -83,7 +85,7 @@ export function useGame(ctx: Ctx, initial: () => GameState, onEvents?: (ev: Game
           fxRef.current.push({ kind: 'broken', x: ev.x + 0.5, y: ev.y + 0.5, born: now, life: 500 });
         }
       }
-      if (fxRef.current.length > 300) fxRef.current = fxRef.current.slice(-200);
+      if (fxRef.current.length > 400) fxRef.current = fxRef.current.slice(-300);
       const notable = events.filter((e) => e.t !== 'hit' && e.t !== 'kill');
       if (notable.length) setLastEvents(notable);
       onEventsRef.current?.(events);
