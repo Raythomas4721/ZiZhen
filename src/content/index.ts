@@ -3,10 +3,11 @@ import type { Content } from '../engine/types';
 import { ch01 } from './chapters/ch01';
 import { chars } from './chars';
 import { enemies } from './enemies';
+import { words } from './words';
 
 export const content: Content = {
   chars,
-  words: [],
+  words,
   recipes: [],
   enemies,
   chapters: [ch01],

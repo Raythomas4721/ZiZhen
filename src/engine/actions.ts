@@ -5,6 +5,7 @@ import { chapterOf, type Ctx } from './ctx';
 import { refresh } from './refresh';
 import { pickWeighted } from './rng';
 import { baseStats, kindOf } from './stats';
+import { partnersOf } from './words';
 import { HAND_SIZE, MAX_LEVEL, type Card, type CardKind, type Cell, type GameState, type Tower } from './types';
 
 export function drawCost(s: GameState): number {
@@ -46,10 +47,21 @@ export function draw(ctx: Ctx, s: GameState): GameState {
   const n = edit(s);
   n.coins -= cost;
   n.drawsThisWave++;
-  const pick = pickWeighted(n, drawPool(ctx, n), (i) => i.w)!;
+  // 保底：連續三張都湊不出詞，下一張一定抽到能跟盤面或手上的字湊詞的字。
+  const onTable = [...n.towers.map((t) => t.ch), ...n.hand.filter((h) => h.kind === 'char').map((h) => h.v)];
+  const useful = (v: string) => partnersOf(ctx, v, onTable).length > 0;
+  let pool = drawPool(ctx, n);
+  if (n.drawsSinceUseful >= GUARANTEE_AFTER && onTable.length > 0) {
+    const helpful = pool.filter((p) => p.kind === 'char' && useful(p.v));
+    if (helpful.length) pool = helpful;
+  }
+  const pick = pickWeighted(n, pool, (i) => i.w)!;
+  n.drawsSinceUseful = pick.kind === 'char' && useful(pick.v) ? 0 : n.drawsSinceUseful + 1;
   n.hand.push({ uid: n.nextId++, kind: pick.kind, v: pick.v, lv: 1 });
   return n;
 }
+
+export const GUARANTEE_AFTER = 3;
 
 export function sellValue(c: Card): number {
   return c.kind === 'char' ? 4 * c.lv : 3;
@@ -151,4 +163,9 @@ export function moveTower(ctx: Ctx, s: GameState, from: Cell, to: Cell): GameSta
   levelUp(ctx, n, towerAt(n, to.x, to.y)!);
   refresh(ctx, n);
   return n;
+}
+
+/** 工具卡拖到盤面上的字；M5 補上。 */
+export function useTool(_ctx: Ctx, s: GameState, _uid: number, _x: number, _y: number): GameState {
+  return invalid(s, '工具還不能用');
 }

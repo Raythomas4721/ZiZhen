@@ -157,3 +157,39 @@ describe('合成', () => {
     expect(s.towers[0]).toMatchObject({ x: 2, y: 1, lv: 2 });
   });
 });
+
+describe('詞', () => {
+  it('照閱讀順序相鄰才連成詞，連成以後兩邊都變強', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 11 });
+    let uid: number;
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 0, 1);
+    const before = s.towers[0].stats.dmg;
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 1, 1);
+    expect(s.words.map((w) => w.w)).toEqual(['火山']);
+    expect(s.towers[0].stats.dmg).toBeGreaterThan(before);
+    expect(s.found).toEqual(['火山']);
+    expect(s.events).toContainEqual({ t: 'word', w: '火山', fresh: true });
+  });
+
+  it('順序反了不算（山火不是詞）', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 11 });
+    let uid: number;
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 0, 1);
+    [s, uid] = withCard(s, '火');
+    s = place(ctx, s, uid, 1, 1);
+    expect(s.words).toEqual([]);
+  });
+
+  it('直排由上到下也算', () => {
+    let s = createGame(ctx, { chapter: 'ch01', seed: 11 });
+    let uid: number;
+    [s, uid] = withCard(s, '山');
+    s = place(ctx, s, uid, 6, 1);
+    [s, uid] = withCard(s, '水');
+    s = place(ctx, s, uid, 6, 2);
+    expect(s.words.map((w) => [w.w, w.dir])).toEqual([['山水', 'v']]);
+  });
+});
